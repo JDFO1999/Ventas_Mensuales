@@ -16,7 +16,7 @@ SQL_USER = "Sa"
 SQL_PASSWORD = "Alkosto123"
 
 OUTPUT_DIR = r"C:\Users\Alkosto\Desktop\excel - automatico"
-OUTPUT_FILE = "Ventas mensuales.xlsx"
+OUTPUT_FILE = "Ventas_Mensuales"
 
 MESES_ES = {
     1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
@@ -55,6 +55,85 @@ def conectar_sql():
         timeout=10
     )
     return conn
+
+
+def crear_tabla_posventas(cursor):
+    cursor.execute("IF OBJECT_ID('PosVentas','U') IS NOT NULL DROP TABLE PosVentas")
+    cursor.connection.commit()
+    cursor.execute("""
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PosVentas')
+        CREATE TABLE PosVentas (
+            Fecha      DATE NOT NULL,
+            Hora       TINYINT NOT NULL,
+            Tienda     VARCHAR(6) NOT NULL,
+            Caja       INT NOT NULL,
+            Tipo       CHAR(2) NOT NULL,
+            STipo      CHAR(2) NULL,
+            Numero     VARCHAR(15) NOT NULL,
+            Anulada    CHAR(1) NULL,
+            Operador   VARCHAR(20) NULL,
+            SubTotal   DECIMAL(18,2) NULL,
+            MontoUSD   DECIMAL(18,2) NOT NULL,
+            MontoBS    DECIMAL(18,2) NULL,
+            Impuesto   DECIMAL(18,2) NULL,
+            Descuento  DECIMAL(18,2) NULL,
+            IGTF       DECIMAL(18,2) NULL,
+            Redondeo   DECIMAL(18,2) NULL,
+            TasaDOL    DECIMAL(20,6) NULL,
+            CodCli     VARCHAR(10) NULL,
+            Nombres    VARCHAR(100) NULL,
+            Apellidos  VARCHAR(100) NULL,
+            NIT        VARCHAR(14) NULL,
+            RIF        VARCHAR(14) NULL,
+            CodVen     VARCHAR(2) NULL,
+            NroZ       VARCHAR(10) NULL,
+            Credito    BIT NULL,
+            Vuelto     DECIMAL(16,2) NULL,
+            LIMPRIMIO  BIT NULL,
+            NroCie     VARCHAR(8) NULL,
+            FechaCie   DATE NULL,
+            FechaCarga DATETIME DEFAULT GETDATE(),
+            CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
+        )
+    """)
+    cursor.connection.commit()
+
+    cursor.execute("""
+        IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_PosVentas_FechaTienda')
+        CREATE INDEX IX_PosVentas_FechaTienda ON PosVentas(Fecha, Tienda)
+    """)
+    cursor.connection.commit()
+
+
+def leer_desde_sql(cursor, year, month):
+    cursor.execute("""
+        SELECT 
+            Tienda,
+            Hora,
+            SUM(CASE WHEN Tipo = 'FA' THEN MontoUSD ELSE -MontoUSD END) as TotalUSD,
+            COUNT(CASE WHEN Tipo = 'FA' THEN 1 END) as Facturas
+        FROM PosVentas
+        WHERE YEAR(Fecha) = ? AND MONTH(Fecha) = ?
+        GROUP BY Tienda, Hora
+        ORDER BY Tienda, Hora
+    """, (year, month))
+
+    data = {}
+    for row in cursor.fetchall():
+        tienda = row.Tienda.strip()
+        hora = str(row.Hora).zfill(2)
+        monto = float(row.TotalUSD)
+        facturas = int(row.Facturas)
+
+        if tienda not in data:
+            data[tienda] = {"ventas": defaultdict(float), "conteo": defaultdict(int), "total": 0, "facturas": 0}
+        
+        data[tienda]["ventas"][hora] += monto
+        data[tienda]["conteo"][hora] += facturas
+        data[tienda]["total"] += monto
+        data[tienda]["facturas"] += facturas
+
+    return data
 
 
 def obtener_sucursales(cursor):
@@ -117,15 +196,16 @@ def listar_pos(codigo, ruta_ip, ruta_dbf, modo):
     return sorted(pos_dirs), None
 
 
-def leer_fc_archivo(filepath, year_objetivo, month_objetivo):
+def leer_fc_archivo(filepath, year_objetivo, month_objetivo, codigo_tienda=None, pos_num=None):
     ventas_por_hora = defaultdict(float)
     conteo_por_hora = defaultdict(int)
+    registros_sql = []
 
     try:
         table = DBF(filepath, encoding="latin-1", char_decode_errors="replace")
     except Exception as e:
         print(f"      ERROR DBF: {e}")
-        return {}, 0, defaultdict(float), defaultdict(int)
+        return {}, 0, defaultdict(float), defaultdict(int), []
 
     for rec in table:
         try:
@@ -156,13 +236,44 @@ def leer_fc_archivo(filepath, year_objetivo, month_objetivo):
                 conteo_por_hora[hora] += 1
             elif tipo == "DV":
                 ventas_por_hora[hora] -= monto_usd
+
+            if codigo_tienda is not None and pos_num is not None:
+                numero = rec.get("NUMERO", "") or ""
+                registros_sql.append((
+                    fecha, int(hora), codigo_tienda, pos_num,
+                    tipo,
+                    rec.get("STIPO", "") or "",
+                    numero.strip(),
+                    rec.get("ANULADA", "") or "",
+                    rec.get("OPERADOR", "") or "",
+                    rec.get("SUBTOTAL", 0) or 0,
+                    monto_usd,
+                    rec.get("MONTOFAC", 0) or 0,
+                    rec.get("IMPUESTO", 0) or 0,
+                    rec.get("DESCUENTO", 0) or 0,
+                    rec.get("IGTF", 0) or 0,
+                    rec.get("REDONDEO", 0) or 0,
+                    rec.get("TASADOL", 0) or 0,
+                    rec.get("CODCLI", "") or "",
+                    rec.get("NOMBRES", "") or "",
+                    rec.get("APELLIDOS", "") or "",
+                    rec.get("NIT", "") or "",
+                    rec.get("RIF", "") or "",
+                    rec.get("CODVEN", "") or "",
+                    rec.get("NRO_Z", "") or "",
+                    1 if rec.get("CREDITO") else 0,
+                    rec.get("VUELTO", 0) or 0,
+                    1 if rec.get("LIMPRIMIO") else 0,
+                    rec.get("NRO_CIE", "") or "",
+                    rec.get("DATE_CIE"),
+                ))
         except Exception:
             pass
 
     total_facturas = sum(conteo_por_hora.values())
     total_ventas = sum(ventas_por_hora.values())
 
-    return ventas_por_hora, total_ventas, conteo_por_hora, total_facturas
+    return ventas_por_hora, total_ventas, conteo_por_hora, total_facturas, registros_sql
 
 
 def formato_hora(hora_str):
@@ -294,13 +405,14 @@ def generar_excel(resultados, year, month, output_path):
         wb.save(output_path)
         print(f"\nArchivo guardado: {output_path}")
     except PermissionError:
-        alt_path = os.path.join(OUTPUT_DIR, f"Ventas mensuales {nombre_mes} {year}.xlsx")
-        wb.save(alt_path)
-        print(f"\nArchivo guardado (alternativo): {alt_path}")
-
-    backup_path = os.path.join(OUTPUT_DIR, f"Ventas mensuales - {nombre_mes} {year}.xlsx")
-    wb.save(backup_path)
-    print(f"Copia respaldo: {backup_path}")
+        try:
+            alt_path = os.path.join(OUTPUT_DIR, f"Ventas_Mensuales_{nombre_mes}_{year}.xlsx")
+            if os.path.exists(alt_path):
+                os.remove(alt_path)
+            wb.save(alt_path)
+            print(f"\nArchivo guardado: {alt_path}")
+        except PermissionError:
+            print(f"\nERROR: No se pudo guardar el archivo. Cierre Excel e intente de nuevo.")
 
 
 def main():
@@ -369,9 +481,132 @@ def main():
 
     print("-" * 40)
 
-    resultados = []
+    total_sucursales = len(sucursales)
+
+    print("\nSeleccion de tiendas:")
+    print("  [1] Todas las tiendas")
+    print("  [2] Elegir manualmente")
+    try:
+        sel_input = input("Seleccione (1/2): ").strip()
+    except (KeyboardInterrupt, EOFError):
+        print("\n  Cancelado.")
+        sys.exit(0)
+
+    if sel_input == "2":
+        print(f"\n  Tiendas disponibles ({total_sucursales}):")
+        for i, s in enumerate(sucursales):
+            print(f"    [{i+1:2d}] {s['codigo']:6s} - {s['nombre']}")
+        try:
+            seleccion = input("\n  Ingrese numeros separados por comas (ej: 1,3,5): ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print("\n  Cancelado.")
+            sys.exit(0)
+
+        indices = []
+        for parte in seleccion.split(","):
+            parte = parte.strip()
+            if "-" in parte:
+                try:
+                    ini, fin = parte.split("-", 1)
+                    indices.extend(range(int(ini.strip()), int(fin.strip()) + 1))
+                except ValueError:
+                    pass
+            else:
+                try:
+                    indices.append(int(parte))
+                except ValueError:
+                    pass
+
+        sucursales = [sucursales[i - 1] for i in indices if 1 <= i <= len(sucursales)]
+        print(f"\n  Seleccionadas: {len(sucursales)} tiendas.")
+    else:
+        print(f"\n  Procesando todas: {total_sucursales} tiendas.")
+
+    print("-" * 40)
+
+    save_sucursales = sucursales
+    resultados = [None] * len(save_sucursales)
     faltantes = []
     total_sucursales = len(sucursales)
+
+    # Conectar SQL, crear tabla
+    conn = conectar_sql()
+    cursor = conn.cursor()
+    crear_tabla_posventas(cursor)
+
+    # Verificar tienda por tienda cuales ya tienen datos en SQL
+    tiendas_con_sql = set()
+    for sucursal in sucursales:
+        codigo = sucursal["codigo"]
+        cursor.execute(
+            "SELECT COUNT(*) FROM PosVentas WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+            (codigo, anio, mes)
+        )
+        if cursor.fetchone()[0] > 0:
+            tiendas_con_sql.add(codigo)
+
+    if tiendas_con_sql:
+        sql_nombres = [c for c in tiendas_con_sql]
+        print(f"\n  {len(tiendas_con_sql)} tiendas con datos en SQL: {', '.join(sql_nombres)}")
+        print("  Estas se leeran desde la base de datos.")
+
+    tiendas_sin_sql = [s for s in sucursales if s["codigo"] not in tiendas_con_sql]
+    if tiendas_sin_sql:
+        sin_nombres = [s["codigo"] for s in tiendas_sin_sql]
+        print(f"  {len(tiendas_sin_sql)} tiendas sin datos en SQL: {', '.join(sin_nombres)}")
+        print("  Estas se leeran desde archivos DBF.")
+
+    conn.close()
+
+    dias_mes = calendar.monthrange(anio, mes)[1]
+
+    # --- Procesar tiendas DESDE SQL ---
+    if tiendas_con_sql:
+        print(f"\n--- Leyendo {len(tiendas_con_sql)} tiendas desde SQL ---")
+        conn = conectar_sql()
+        cursor = conn.cursor()
+        data_sql = leer_desde_sql(cursor, anio, mes)
+        conn.close()
+
+        for sucursal in sucursales:
+            if sucursal["codigo"] not in tiendas_con_sql:
+                continue
+            codigo = sucursal["codigo"]
+            tienda_letra = codigo[0].upper() if codigo else "?"
+            sd = data_sql.get(codigo, {})
+
+            clientes = sd.get("facturas", 0)
+            total = sd.get("total", 0)
+            conteo = sd.get("conteo", defaultdict(int))
+            promedio = total / clientes if clientes > 0 else 0
+
+            if conteo:
+                hmk = max(conteo, key=conteo.get)
+                cm = conteo[hmk]; hm = formato_hora(hmk)
+                hmink = min(conteo, key=conteo.get)
+                cmi = conteo[hmink]; hmi = formato_hora(hmink)
+            else:
+                hm = ""; cm = 0; hmi = ""; cmi = 0
+
+            idx_res = save_sucursales.index(sucursal)
+            resultados[idx_res] = {
+                "tienda": tienda_letra, "promedio_factura": promedio,
+                "clientes": clientes, "total": total,
+                "hora_mayor": hm, "clientes_mayor": cm,
+                "hora_menor": hmi, "clientes_menor": cmi,
+            }
+
+    # --- Procesar tiendas DESDE DBF ---
+    if tiendas_sin_sql:
+        print(f"\n--- Leyendo {len(tiendas_sin_sql)} tiendas desde DBF ---")
+        print("-" * 40)
+
+        conn_sql = conectar_sql()
+        cursor_sql = conn_sql.cursor()
+        cursor_sql.fast_executemany = True
+        crear_tabla_posventas(cursor_sql)
+
+        sucursales = tiendas_sin_sql
 
     for idx, sucursal in enumerate(sucursales):
         t_store_start = time.time()
@@ -387,7 +622,8 @@ def main():
         if modo == "IP" and not ruta_ip:
             print(f"  FALLO: Sin IP/ruta configurada en la base de datos.")
             faltantes.append(sucursal)
-            resultados.append({
+            idx_res = save_sucursales.index(sucursal)
+            resultados[idx_res] = {
                 "tienda": tienda_letra,
                 "promedio_factura": 0,
                 "clientes": 0,
@@ -396,7 +632,7 @@ def main():
                 "clientes_mayor": 0,
                 "hora_menor": "",
                 "clientes_menor": 0,
-            })
+            }
             continue
 
         pos_dirs, error_listado = listar_pos(codigo, ruta_ip, ruta_dbf, modo)
@@ -408,7 +644,8 @@ def main():
             razon = error_listado or "Motivo desconocido"
             print(f"  FALLO: {razon}")
             faltantes.append(sucursal)
-            resultados.append({
+            idx_res = save_sucursales.index(sucursal)
+            resultados[idx_res] = {
                 "tienda": tienda_letra,
                 "promedio_factura": 0,
                 "clientes": 0,
@@ -417,12 +654,13 @@ def main():
                 "clientes_mayor": 0,
                 "hora_menor": "",
                 "clientes_menor": 0,
-            })
+            }
             continue
 
         ventas_combinadas = defaultdict(float)
         conteo_combinado = defaultdict(int)
         cajas_procesadas = 0
+        store_regs = []
         total_pos = len(pos_dirs)
 
         for i, (pos_num, pos_path) in enumerate(pos_dirs):
@@ -441,9 +679,11 @@ def main():
             sys.stdout.flush()
 
             t_file_start = time.time()
-            vph, total_ventas, cph, total_facturas = leer_fc_archivo(
-                dbf_path, anio, mes
+            vph, total_ventas, cph, total_facturas, regs_sql = leer_fc_archivo(
+                dbf_path, anio, mes, codigo, pos_num
             )
+            if regs_sql:
+                store_regs.extend(regs_sql)
             t_file_elapsed = time.time() - t_file_start
 
             if total_facturas > 0:
@@ -464,7 +704,8 @@ def main():
 
         if cajas_procesadas == 0:
             print(f"  Sin datos de ventas para {nombre_mes} {anio}. ({t_store_elapsed:.0f}s)")
-            resultados.append({
+            idx_res = save_sucursales.index(sucursal)
+            resultados[idx_res] = {
                 "tienda": tienda_letra,
                 "promedio_factura": 0,
                 "clientes": 0,
@@ -473,7 +714,7 @@ def main():
                 "clientes_mayor": 0,
                 "hora_menor": "",
                 "clientes_menor": 0,
-            })
+            }
             continue
 
         promedio_factura = total_ventas / total_facturas if total_facturas > 0 else 0
@@ -494,7 +735,28 @@ def main():
         print(f"  => {cajas_procesadas} cajas | {total_facturas:,.0f} facts | Total: ${total_ventas:,.2f} | Prom: ${promedio_factura:,.2f} | Pico: {hora_mayor} ({clientes_mayor}) | ({t_store_elapsed:.0f}s)")
         sys.stdout.flush()
 
-        resultados.append({
+        # Guardar en SQL Server para esta tienda (resume: si ya tiene datos, saltar)
+        cursor_sql.execute("SELECT COUNT(*) FROM PosVentas WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+            (codigo, anio, mes))
+        if cursor_sql.fetchone()[0] == 0 and store_regs:
+            # Borrar datos viejos de esta tienda
+            cursor_sql.execute("DELETE FROM PosVentas WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+                (codigo, anio, mes))
+            conn_sql.commit()
+            # Insertar en chunks
+            CHUNK = 5000
+            for i in range(0, len(store_regs), CHUNK):
+                chunk = store_regs[i:i+CHUNK]
+                cursor_sql.executemany(
+                    "INSERT INTO PosVentas (Fecha,Hora,Tienda,Caja,Tipo,STipo,Numero,Anulada,Operador,"
+                    "SubTotal,MontoUSD,MontoBS,Impuesto,Descuento,IGTF,Redondeo,TasaDOL,"
+                    "CodCli,Nombres,Apellidos,NIT,RIF,CodVen,NroZ,Credito,Vuelto,LIMPRIMIO,NroCie,FechaCie) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", chunk)
+                conn_sql.commit()
+            print(f"  SQL: {len(store_regs)} registros guardados.")
+
+        idx_res = save_sucursales.index(sucursal)
+        resultados[idx_res] = {
             "tienda": tienda_letra,
             "promedio_factura": promedio_factura,
             "clientes": total_facturas,
@@ -503,7 +765,7 @@ def main():
             "clientes_mayor": clientes_mayor,
             "hora_menor": hora_menor,
             "clientes_menor": clientes_menor,
-        })
+        }
 
     t_total_elapsed = time.time() - t_total_start
     print(f"\n{'=' * 60}")
@@ -544,6 +806,7 @@ def main():
                 ventas_combinadas = defaultdict(float)
                 conteo_combinado = defaultdict(int)
                 cajas_procesadas = 0
+                store_regs = []
                 total_pos = len(pos_dirs)
 
                 for i, (pos_num, pos_path) in enumerate(pos_dirs):
@@ -562,9 +825,11 @@ def main():
                     sys.stdout.flush()
 
                     t_file_start = time.time()
-                    vph, total_ventas, cph, total_facturas = leer_fc_archivo(
-                        dbf_path, anio, mes
+                    vph, total_ventas, cph, total_facturas, regs_sql = leer_fc_archivo(
+                        dbf_path, anio, mes, codigo, pos_num
                     )
+                    if regs_sql:
+                        store_regs.extend(regs_sql)
                     t_file_elapsed = time.time() - t_file_start
 
                     if total_facturas > 0:
@@ -605,8 +870,22 @@ def main():
                 print(f"    => {cajas_procesadas} cajas | {total_facturas:,.0f} facts | Total: ${total_ventas:,.2f} | Prom: ${promedio_factura:,.2f} | Pico: {hora_mayor} ({clientes_mayor}) | ({t_store_elapsed:.0f}s)")
                 sys.stdout.flush()
 
-                # Actualizar resultado en la posicion correspondiente
-                idx_suc = sucursales.index(sucursal)
+                if store_regs:
+                    cursor_sql.execute("DELETE FROM PosVentas WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+                        (codigo, anio, mes))
+                    conn_sql.commit()
+                    CHUNK = 5000
+                    for i in range(0, len(store_regs), CHUNK):
+                        chunk = store_regs[i:i+CHUNK]
+                        cursor_sql.executemany(
+                            "INSERT INTO PosVentas (Fecha,Hora,Tienda,Caja,Tipo,STipo,Numero,Anulada,Operador,"
+                            "SubTotal,MontoUSD,MontoBS,Impuesto,Descuento,IGTF,Redondeo,TasaDOL,"
+                            "CodCli,Nombres,Apellidos,NIT,RIF,CodVen,NroZ,Credito,Vuelto,LIMPRIMIO,NroCie,FechaCie) "
+                            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", chunk)
+                        conn_sql.commit()
+                    print(f"    SQL: {len(store_regs)} registros guardados.")
+
+                idx_suc = save_sucursales.index(sucursal)
                 resultados[idx_suc] = {
                     "tienda": tienda_letra,
                     "promedio_factura": promedio_factura,
@@ -618,7 +897,13 @@ def main():
                     "clientes_menor": clientes_menor,
                 }
 
-    total_facturas_general = sum(r["clientes"] for r in resultados)
+    # Restaurar lista original
+    sucursales = save_sucursales
+
+    if tiendas_sin_sql:
+        conn_sql.close()
+
+    total_facturas_general = sum(r["clientes"] for r in resultados if r is not None)
     if total_facturas_general == 0:
         print("\n" + "=" * 60)
         print("ADVERTENCIA: Ninguna tienda tiene datos para este mes/ano.")
@@ -632,7 +917,10 @@ def main():
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
-    output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
+    output_path = os.path.join(OUTPUT_DIR, f"{OUTPUT_FILE}_{nombre_mes}_{anio}.xlsx")
+    # Eliminar viejo si existe
+    if os.path.exists(output_path):
+        os.remove(output_path)
     generar_excel(resultados, anio, mes, output_path)
 
     print(f"Tiempo total: {t_total_elapsed/60:.1f} minutos.")
