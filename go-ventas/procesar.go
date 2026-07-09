@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -361,34 +362,80 @@ func minKey(m map[int]int) (int, int) {
 	return bestK, bestV
 }
 
-func calcularResultado(tiendaLetra string, data map[int]VentaPorHora) ResultadoTienda {
-	conteo := make(map[int]int)
-	total := 0.0
-	clientes := 0
-	for h, v := range data {
-		conteo[h] = v.Facturas
-		total += v.TotalUSD
-		clientes += v.Facturas
+func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, month int, modo string, conProgreso bool) []ResultadoTienda {
+	maxRetries := 3
+	resultados := make([]ResultadoTienda, total)
+	pendientes := make([]tareaTienda, len(tasks))
+	copy(pendientes, tasks)
+
+	for attempt := 0; attempt < maxRetries && len(pendientes) > 0; attempt++ {
+		if attempt > 0 {
+			fmt.Printf("\n  >>> REINTENTO %d: %d tiendas pendientes...\n", attempt, len(pendientes))
+		}
+
+		var nuevosPendientes []tareaTienda
+		var wg sync.WaitGroup
+
+		type storeRes struct {
+			tt    tareaTienda
+			res   ResultadoTienda
+			fallo bool
+		}
+		resultChan := make(chan storeRes, len(pendientes))
+
+		for _, t := range pendientes {
+			wg.Add(1)
+			go func(tt tareaTienda) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						fmt.Printf("\n  %s - PANIC: %v\n", tt.suc.Codigo, r)
+						resultChan <- storeRes{tt: tt, fallo: true}
+					}
+				}()
+
+				ch := ProcesarTienda(tt.suc, db, year, month, modo, true)
+				select {
+				case msg := <-ch:
+					if msg.Err != nil {
+						fmt.Printf("\n  [%d/%d] %s - ERROR: %v\n", tt.idx+1, total, tt.suc.Codigo, msg.Err)
+						resultChan <- storeRes{tt: tt, fallo: true}
+					} else {
+						resultChan <- storeRes{tt: tt, res: msg.Resultado}
+					}
+				case <-time.After(30 * time.Minute):
+					fmt.Printf("\n  [%d/%d] %s - TIMEOUT\n", tt.idx+1, total, tt.suc.Codigo)
+					resultChan <- storeRes{tt: tt, fallo: true}
+				}
+			}(t)
+		}
+
+		wg.Wait()
+		close(resultChan)
+
+		for msg := range resultChan {
+			if msg.fallo {
+				nuevosPendientes = append(nuevosPendientes, msg.tt)
+			} else {
+				resultados[msg.tt.idx] = msg.res
+				if conProgreso && msg.res.Clientes > 0 {
+					fmt.Printf("\n  [%d/%d] %s - %d facts | Total: $%.2f | Pico: %s (%d)\n",
+						msg.tt.idx+1, total, msg.tt.suc.Codigo,
+						msg.res.Clientes, msg.res.Total,
+						msg.res.HoraMayor, msg.res.ClientesMayor)
+				}
+			}
+		}
+
+		pendientes = nuevosPendientes
 	}
 
-	promedio := 0.0
-	if clientes > 0 {
-		promedio = total / float64(clientes)
+	if len(pendientes) > 0 {
+		fmt.Printf("\n  *** ADVERTENCIA: %d tiendas sin procesar tras %d intentos ***\n", len(pendientes), maxRetries)
+		for _, t := range pendientes {
+			fmt.Printf("    - %s\n", t.suc.Codigo)
+		}
 	}
 
-	hmKey, cm := maxKey(conteo)
-	hm := formatoHora(hmKey)
-	hmiKey, cmi := minKey(conteo)
-	hmi := formatoHora(hmiKey)
-
-	return ResultadoTienda{
-		Tienda:          tiendaLetra,
-		PromedioFactura: promedio,
-		Clientes:        clientes,
-		Total:           total,
-		HoraMayor:       hm,
-		ClientesMayor:   cm,
-		HoraMenor:       hmi,
-		ClientesMenor:   cmi,
-	}
+	return resultados
 }

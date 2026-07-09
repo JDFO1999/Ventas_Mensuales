@@ -58,8 +58,8 @@ func ObtenerSucursales(db *sql.DB) ([]Sucursal, error) {
 }
 
 func CrearTablaPosVentas(db *sql.DB) error {
-	db.Exec("IF OBJECT_ID('PosVentas','U') IS NOT NULL DROP TABLE PosVentas")
 	_, err := db.Exec(`
+		IF OBJECT_ID('PosVentas','U') IS NULL
 		CREATE TABLE PosVentas (
 			Fecha      DATE NOT NULL,
 			Hora       TINYINT NOT NULL,

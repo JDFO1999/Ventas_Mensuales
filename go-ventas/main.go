@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"database/sql"
@@ -72,9 +71,23 @@ func main() {
 func menuPrincipal() {
 	for {
 		fmt.Println()
-		fmt.Println(strings.Repeat("=", 60))
-		fmt.Println("  GENERADOR DE VENTAS MENSUALES DESDE POS (Go)")
-		fmt.Println(strings.Repeat("=", 60))
+		fmt.Println("+------------------------------------------------------------+")
+		fmt.Println("|                                                            |")
+		fmt.Println("|   __     __ _____ _   _ _____  _      __  __               |")
+		fmt.Println("|   \\ \\   / /| ____| \\ | |_   _|/ \\    |  \\/  |              |")
+		fmt.Println("|    \\ \\ / / |  _| |  \\| | | | / _ \\   | |\\/| |              |")
+		fmt.Println("|     \\ V /  | |___| |\\  | | |/ ___ \\  | |  | |              |")
+		fmt.Println("|      \\_/   |_____|_| \\_| |_/_/   \\_\\ |_|  |_|              |")
+		fmt.Println("|                                                            |")
+		fmt.Println("|   __  __ _____ _   _ ____  _   _  _    _____ ____          |")
+		fmt.Println("|  |  \\/  | ____| \\ | / ___|| | | |/ \\  | ____/ ___|         |")
+		fmt.Println("|  | |\\/| |  _| |  \\| \\___ \\| | | / _ \\|  _| \\___ \\          |")
+		fmt.Println("|  | |  | | |___| |\\  |___) | |_|/ ___ \\ |__ ___) |         |")
+		fmt.Println("|  |_|  |_|_____|_| \\_|____/ \\___/_/   \\_\\___|____/          |")
+		fmt.Println("|                                                            |")
+		fmt.Println("|                       A L K O S T O                        |")
+		fmt.Println("|                                                            |")
+		fmt.Println("+------------------------------------------------------------+")
 		fmt.Println()
 		fmt.Println("  [1] Generar reporte manual")
 		fmt.Println("  [2] Configurar automatizacion")
@@ -225,84 +238,53 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 		fmt.Printf("  %d tiendas con datos en SQL (se saltara DBF)\n", len(dataSQL))
 	}
 
-	resultados := make([]ResultadoTienda, len(sucursales))
-	var wg sync.WaitGroup
-	type storeResult struct {
-		index int
-		res   ResultadoTienda
-	}
-	resultChan := make(chan storeResult, len(sucursales))
+	total := len(sucursales)
+	resultados := make([]ResultadoTienda, total)
+	var tasks []tareaTienda
 
 	for i, s := range sucursales {
-		wg.Add(1)
-		go func(idx int, suc Sucursal) {
-			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					fmt.Printf("\n[%d/%d] %s - PANIC: %v\n", idx+1, len(sucursales), suc.Codigo, r)
-					resultChan <- storeResult{index: idx}
-				}
-			}()
+		codigo := s.Codigo
+		tiendaLetra := strings.ToUpper(string(codigo[0]))
 
-			codigo := suc.Codigo
-			tiendaLetra := strings.ToUpper(string(codigo[0]))
-
-			if tiendaData, ok := dataSQL[codigo]; ok {
-				conteo := make(map[int]int)
-				total := 0.0
-				clientes := 0
-				for h, v := range tiendaData {
-					conteo[h] = v.Facturas
-					total += v.TotalUSD
-					clientes += v.Facturas
-				}
-				promedio := 0.0
-				if clientes > 0 {
-					promedio = total / float64(clientes)
-				}
-				hmKey, cm := maxKey(conteo)
-				hmiKey, cmi := minKey(conteo)
-
-				fmt.Printf("\n[%d/%d] %s - %s", idx+1, len(sucursales), suc.Codigo, suc.Nombre)
-				if clientes > 0 {
-					fmt.Printf("\n  SQL: %d facts | Total: $%.2f | Pico: %s (%d)\n",
-						clientes, total, formatoHora(hmKey), cm)
-				}
-				resultChan <- storeResult{index: idx, res: ResultadoTienda{
-					Tienda: tiendaLetra, PromedioFactura: promedio,
-					Clientes: clientes, Total: total,
-					HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
-					HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
-				}}
-				return
+		if tiendaData, ok := dataSQL[codigo]; ok {
+			conteo := make(map[int]int)
+			totalV := 0.0
+			clientes := 0
+			for h, v := range tiendaData {
+				conteo[h] = v.Facturas
+				totalV += v.TotalUSD
+				clientes += v.Facturas
 			}
-
-			ch := ProcesarTienda(suc, db, anio, mes, modo, true)
-			select {
-			case msg := <-ch:
-				fmt.Printf("\n[%d/%d] %s - %s", idx+1, len(sucursales), suc.Codigo, suc.Nombre)
-				if msg.Err != nil {
-					fmt.Printf("\n  %v\n", msg.Err)
-				} else if msg.Resultado.Clientes > 0 {
-					fmt.Printf("\n  => %d facts | Total: $%.2f | Prom: $%.2f | Pico: %s (%d)\n",
-						msg.Resultado.Clientes, msg.Resultado.Total,
-						msg.Resultado.PromedioFactura,
-						msg.Resultado.HoraMayor, msg.Resultado.ClientesMayor)
-				} else {
-					fmt.Printf("\n  Sin datos de ventas.\n")
-				}
-				resultChan <- storeResult{index: idx, res: msg.Resultado}
-			case <-time.After(30 * time.Minute):
-				fmt.Printf("\n[%d/%d] %s - TIMEOUT\n", idx+1, len(sucursales), suc.Codigo)
-				resultChan <- storeResult{index: idx}
+			promedio := 0.0
+			if clientes > 0 {
+				promedio = totalV / float64(clientes)
 			}
-		}(i, s)
+			hmKey, cm := maxKey(conteo)
+			hmiKey, cmi := minKey(conteo)
+
+			fmt.Printf("\n[%d/%d] %s - %s", i+1, total, codigo, s.Nombre)
+			if clientes > 0 {
+				fmt.Printf("\n  SQL: %d facts | Total: $%.2f | Pico: %s (%d)\n",
+					clientes, totalV, formatoHora(hmKey), cm)
+			}
+			resultados[i] = ResultadoTienda{
+				Tienda: tiendaLetra, PromedioFactura: promedio,
+				Clientes: clientes, Total: totalV,
+				HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
+				HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
+			}
+		} else {
+			tasks = append(tasks, tareaTienda{idx: i, suc: s})
+		}
 	}
 
-	wg.Wait()
-	close(resultChan)
-	for msg := range resultChan {
-		resultados[msg.index] = msg.res
+	if len(tasks) > 0 {
+		dbfResultados := procesarConReintentos(tasks, total, db, anio, mes, modo, true)
+		for i, r := range dbfResultados {
+			if r.Clientes > 0 || r.Tienda != "" {
+				resultados[i] = r
+			}
+		}
 	}
 
 	totalFact := 0

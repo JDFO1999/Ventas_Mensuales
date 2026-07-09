@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -114,6 +113,7 @@ if "%%MES:~0,1%%"=="0" set MES=%%MES:~1,1%%
 echo [%%date%% %%time%%] Iniciando...
 "%s\ventas_mensuales.exe" --auto --month=%%MES%% --year=%%ANIO%% --mode=%s
 echo [%%date%% %%time%%] Completado.
+pause
 `, exeDir, cfg.Modo)
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
 
@@ -143,6 +143,14 @@ try {
 }
 
 func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("\n  *** PANIC GLOBAL: %v ***\n", r)
+		}
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+	}()
+
 	tStart := time.Now()
 
 	db, err := ConectarSQL()
@@ -162,49 +170,15 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
 
 	CrearTablaPosVentas(db)
 
-	fmt.Printf("  %d tiendas a procesar\n", len(sucursales))
+	total := len(sucursales)
+	fmt.Printf("  %d tiendas a procesar\n", total)
 
-	resultados := make([]ResultadoTienda, len(sucursales))
-	var wg sync.WaitGroup
-	type storeResult struct {
-		index int
-		res   ResultadoTienda
-	}
-	resultChan := make(chan storeResult, len(sucursales))
-
+	tasks := make([]tareaTienda, total)
 	for i, s := range sucursales {
-		wg.Add(1)
-		go func(idx int, suc Sucursal) {
-			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					resultChan <- storeResult{index: idx}
-				}
-			}()
-
-			ch := ProcesarTienda(suc, db, year, month, cfg.Modo, true)
-			select {
-			case msg := <-ch:
-				if conProgreso && msg.Resultado.Clientes > 0 {
-					fmt.Printf("[%d/%d] %s - %d facts | Total: $%.2f\n",
-						idx+1, len(sucursales), suc.Codigo,
-						msg.Resultado.Clientes, msg.Resultado.Total)
-				}
-				resultChan <- storeResult{index: idx, res: msg.Resultado}
-			case <-time.After(30 * time.Minute):
-				if conProgreso {
-					fmt.Printf("[%d/%d] %s - TIMEOUT\n", idx+1, len(sucursales), suc.Codigo)
-				}
-				resultChan <- storeResult{index: idx}
-			}
-		}(i, s)
+		tasks[i] = tareaTienda{idx: i, suc: s}
 	}
 
-	wg.Wait()
-	close(resultChan)
-	for msg := range resultChan {
-		resultados[msg.index] = msg.res
-	}
+	resultados := procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
 
 	totalFact := 0
 	for _, r := range resultados {

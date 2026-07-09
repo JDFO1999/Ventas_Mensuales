@@ -58,6 +58,11 @@ type VentaPorHora struct {
 	Facturas int
 }
 
+type tareaTienda struct {
+	idx int
+	suc Sucursal
+}
+
 var MesesES = map[int]string{
 	1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
 	5: "MAYO", 6: "JUNIO", 7: "JULIO", 8: "AGOSTO",
