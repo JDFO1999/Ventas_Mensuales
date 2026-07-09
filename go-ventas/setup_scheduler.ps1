@@ -1,7 +1,7 @@
 
 $taskName = "VentasMensuales"
-$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c C:\Users\Alkosto\Desktop\excel - automatico\go-ventas\run_ventas.cmd"
-$trigger = New-ScheduledTaskTrigger -Daily -At "08:00" -RepetitionInterval (New-TimeSpan -Minutes 60) -RepetitionDuration (New-TimeSpan -Hours 10)
+$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/c "' + "C:\Users\Alkosto\Desktop\excel - automatico\go-ventas\run_ventas.cmd" + '"')
+$trigger = New-ScheduledTaskTrigger -Once -At "08:00" -RepetitionInterval (New-TimeSpan -Minutes 60) -RepetitionDuration (New-TimeSpan -Hours 10)
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
 try {
