@@ -89,6 +89,9 @@ func menuPrincipal() {
 		fmt.Println("|                                                            |")
 		fmt.Println("+------------------------------------------------------------+")
 		fmt.Println()
+
+		fmt.Printf("  TAREA PROGRAMADA: %s\n", estadoTarea())
+		fmt.Println()
 		fmt.Println("  [1] Generar reporte manual")
 		fmt.Println("  [2] Configurar automatizacion")
 		fmt.Println("  [3] Ejecutar modo automatico")

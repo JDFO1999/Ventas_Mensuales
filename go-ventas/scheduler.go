@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -113,15 +114,18 @@ if "%%MES:~0,1%%"=="0" set MES=%%MES:~1,1%%
 echo [%%date%% %%time%%] Iniciando...
 "%s\ventas_mensuales.exe" --auto --month=%%MES%% --year=%%ANIO%% --mode=%s
 echo [%%date%% %%time%%] Completado.
-pause
 `, exeDir, cfg.Modo)
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
+
+	vbsPath := exeDir + "\\run_ventas.vbs"
+	vbs := fmt.Sprintf(`CreateObject("Wscript.Shell").Run "cmd /c ""%s""", 0, False`, cmdPath)
+	os.WriteFile(vbsPath, []byte(vbs), 0644)
 
 	psPath := exeDir + "\\setup_scheduler.ps1"
 	duration := cfg.HoraFin - cfg.HoraInicio
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensuales"
-$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c %s"
+$action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument ('//B "' + "%s" + '"')
 $trigger = New-ScheduledTaskTrigger -Daily -At "%02d:00" -RepetitionInterval (New-TimeSpan -Minutes %d) -RepetitionDuration (New-TimeSpan -Hours %d)
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
@@ -132,11 +136,12 @@ try {
 } catch {
     Write-Host "ERROR: $_"
 }
-`, cmdPath, cfg.HoraInicio, cfg.IntervaloMinutos, duration, cfg.HoraInicio, cfg.HoraFin, cfg.IntervaloMinutos)
+`, vbsPath, cfg.HoraInicio, cfg.IntervaloMinutos, duration, cfg.HoraInicio, cfg.HoraFin, cfg.IntervaloMinutos)
 	os.WriteFile(psPath, []byte(ps), 0644)
 
 	fmt.Println("\n  Archivos creados:")
-	fmt.Printf("    %s\n    %s\n", cmdPath, psPath)
+	fmt.Printf("    %s\n    %s\n", cmdPath, vbsPath)
+	fmt.Printf("    %s\n", psPath)
 	fmt.Println()
 	fmt.Println("  EJECUTE COMO ADMINISTRADOR:")
 	fmt.Printf("    powershell -File \"%s\"\n", psPath)
@@ -170,15 +175,63 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
 
 	CrearTablaPosVentas(db)
 
+	dataSQL, err := LeerDatosDesdeSQL(db, year, month)
+	if err != nil {
+		dataSQL = make(map[string]map[int]VentaPorHora)
+	}
+
 	total := len(sucursales)
 	fmt.Printf("  %d tiendas a procesar\n", total)
 
-	tasks := make([]tareaTienda, total)
+	resultados := make([]ResultadoTienda, total)
+	sqlCount := 0
+	var tasks []tareaTienda
+
 	for i, s := range sucursales {
-		tasks[i] = tareaTienda{idx: i, suc: s}
+		codigo := s.Codigo
+		tiendaLetra := strings.ToUpper(string(codigo[0]))
+
+		if tiendaData, ok := dataSQL[codigo]; ok && len(tiendaData) > 0 {
+			conteo := make(map[int]int)
+			totalV := 0.0
+			clientes := 0
+			for h, v := range tiendaData {
+				conteo[h] = v.Facturas
+				totalV += v.TotalUSD
+				clientes += v.Facturas
+			}
+			promedio := 0.0
+			if clientes > 0 {
+				promedio = totalV / float64(clientes)
+			}
+			hmKey, cm := maxKey(conteo)
+			hmiKey, cmi := minKey(conteo)
+
+			resultados[i] = ResultadoTienda{
+				Tienda: tiendaLetra, PromedioFactura: promedio,
+				Clientes: clientes, Total: totalV,
+				HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
+				HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
+			}
+			sqlCount++
+		} else {
+			tasks = append(tasks, tareaTienda{idx: i, suc: s})
+		}
 	}
 
-	resultados := procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+	if sqlCount > 0 {
+		fmt.Printf("  %d tiendas con datos en SQL (se saltara DBF)\n", sqlCount)
+	}
+
+	if len(tasks) > 0 {
+		fmt.Printf("  %d tiendas pendientes de DBF\n", len(tasks))
+		dbfResultados := procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+		for i, r := range dbfResultados {
+			if r.Clientes > 0 || r.Tienda != "" {
+				resultados[i] = r
+			}
+		}
+	}
 
 	totalFact := 0
 	for _, r := range resultados {
@@ -197,4 +250,21 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
 
 	fmt.Printf("[%s] Completado en %.1f min.\n",
 		time.Now().Format("15:04:05"), time.Since(tStart).Minutes())
+}
+
+func estadoTarea() string {
+	out, err := exec.Command("schtasks", "/query", "/tn", "VentasMensuales", "/fo", "CSV", "/nh").Output()
+	if err != nil {
+		return "NO CONFIGURADA"
+	}
+	fields := strings.Split(strings.TrimSpace(string(out)), ",")
+	if len(fields) < 3 {
+		return "ERROR AL CONSULTAR"
+	}
+	nextRun := strings.Trim(fields[1], `"`)
+	status := strings.Trim(fields[2], `"`)
+	if status == "Ready" || status == "Running" {
+		return fmt.Sprintf("ACTIVA  |  Proximo: %s", nextRun)
+	}
+	return fmt.Sprintf("%s  |  Proximo: %s", status, nextRun)
 }
