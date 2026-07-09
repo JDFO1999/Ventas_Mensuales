@@ -253,18 +253,26 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
 }
 
 func estadoTarea() string {
-	out, err := exec.Command("schtasks", "/query", "/tn", "VentasMensuales", "/fo", "CSV", "/nh").Output()
+	psCmd := `$t = Get-ScheduledTask -TaskName 'VentasMensuales' -ErrorAction SilentlyContinue; ` +
+		`if ($t) { ` +
+		`  $i = Get-ScheduledTaskInfo -TaskName 'VentasMensuales' -ErrorAction SilentlyContinue; ` +
+		`  $next = if ($i -and $i.NextRunTime) { $i.NextRunTime.ToString('dd/MM/yyyy HH:mm') } else { '???' }; ` +
+		`  Write-Output ('OK|' + $t.State + '|' + $next) ` +
+		`} else { ` +
+		`  Write-Output 'NO CONFIGURADA' ` +
+		`}`
+
+	out, err := exec.Command("powershell", "-NoProfile", "-Command", psCmd).Output()
 	if err != nil {
-		return "NO CONFIGURADA"
-	}
-	fields := strings.Split(strings.TrimSpace(string(out)), ",")
-	if len(fields) < 3 {
 		return "ERROR AL CONSULTAR"
 	}
-	nextRun := strings.Trim(fields[1], `"`)
-	status := strings.Trim(fields[2], `"`)
-	if status == "Ready" || status == "Running" {
-		return fmt.Sprintf("ACTIVA  |  Proximo: %s", nextRun)
+	result := strings.TrimSpace(string(out))
+	if result == "NO CONFIGURADA" {
+		return result
 	}
-	return fmt.Sprintf("%s  |  Proximo: %s", status, nextRun)
+	parts := strings.SplitN(result, "|", 3)
+	if len(parts) >= 3 {
+		return fmt.Sprintf("ACTIVA (%s)  |  Proximo: %s", parts[1], parts[2])
+	}
+	return result
 }
