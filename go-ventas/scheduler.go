@@ -123,28 +123,55 @@ echo [%%date%% %%time%%] Completado.
 
 	psPath := exeDir + "\\setup_scheduler.ps1"
 	duration := cfg.HoraFin - cfg.HoraInicio
+
+	var psTrigger string
+	if duration <= 0 {
+		psTrigger = fmt.Sprintf(`$trigger = New-ScheduledTaskTrigger -Daily -At "%02d:00"`, cfg.HoraInicio)
+	} else {
+		psTrigger = fmt.Sprintf(
+			`$trigger = New-ScheduledTaskTrigger -Once -At "%02d:00" -RepetitionInterval (New-TimeSpan -Minutes %d) -RepetitionDuration (New-TimeSpan -Hours %d)`,
+			cfg.HoraInicio, cfg.IntervaloMinutos, duration)
+	}
+
+	var psMessage string
+	if duration <= 0 {
+		psMessage = fmt.Sprintf(`Write-Host "Tarea creada: $taskName (diaria %02d:00)"`, cfg.HoraInicio)
+	} else {
+		psMessage = fmt.Sprintf(`Write-Host "Tarea creada: $taskName (%02d:00 a %02d:00, cada %d min)"`,
+			cfg.HoraInicio, cfg.HoraFin, cfg.IntervaloMinutos)
+	}
+
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensuales"
 $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument ('//B "' + "%s" + '"')
-$trigger = New-ScheduledTaskTrigger -Daily -At "%02d:00" -RepetitionInterval (New-TimeSpan -Minutes %d) -RepetitionDuration (New-TimeSpan -Hours %d)
+%s
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
 try {
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
     Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -RunLevel Highest
-    Write-Host "Tarea creada: $taskName (%02d:00 a %02d:00, cada %d min)"
+    %s
 } catch {
     Write-Host "ERROR: $_"
 }
-`, vbsPath, cfg.HoraInicio, cfg.IntervaloMinutos, duration, cfg.HoraInicio, cfg.HoraFin, cfg.IntervaloMinutos)
+`, vbsPath, psTrigger, psMessage)
 	os.WriteFile(psPath, []byte(ps), 0644)
 
 	fmt.Println("\n  Archivos creados:")
 	fmt.Printf("    %s\n    %s\n", cmdPath, vbsPath)
 	fmt.Printf("    %s\n", psPath)
 	fmt.Println()
-	fmt.Println("  EJECUTE COMO ADMINISTRADOR:")
-	fmt.Printf("    powershell -File \"%s\"\n", psPath)
+
+	fmt.Println("  Intentando registrar tarea...")
+	regCmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", psPath)
+	if out, err := regCmd.CombinedOutput(); err != nil {
+		fmt.Printf("  NO SE PUDO REGISTRAR (requiere admin): %s\n", strings.TrimSpace(string(out)))
+		fmt.Println()
+		fmt.Println("  EJECUTE COMO ADMINISTRADOR MANUALMENTE:")
+		fmt.Printf("    powershell -File \"%s\"\n", psPath)
+	} else {
+		fmt.Printf("  %s\n", strings.TrimSpace(string(out)))
+	}
 }
 
 func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
