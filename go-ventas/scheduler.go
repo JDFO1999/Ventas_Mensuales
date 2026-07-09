@@ -117,10 +117,6 @@ echo [%%date%% %%time%%] Completado.
 `, exeDir, cfg.Modo)
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
 
-	vbsPath := exeDir + "\\run_ventas.vbs"
-	vbs := fmt.Sprintf(`CreateObject("Wscript.Shell").Run "cmd /c ""%s""", 0, False`, cmdPath)
-	os.WriteFile(vbsPath, []byte(vbs), 0644)
-
 	psPath := exeDir + "\\setup_scheduler.ps1"
 	duration := cfg.HoraFin - cfg.HoraInicio
 
@@ -143,7 +139,7 @@ echo [%%date%% %%time%%] Completado.
 
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensuales"
-$action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument ('//B "' + "%s" + '"')
+$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/c "' + "%s" + '"')
 %s
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
@@ -154,11 +150,11 @@ try {
 } catch {
     Write-Host "ERROR: $_"
 }
-`, vbsPath, psTrigger, psMessage)
+`, cmdPath, psTrigger, psMessage)
 	os.WriteFile(psPath, []byte(ps), 0644)
 
 	fmt.Println("\n  Archivos creados:")
-	fmt.Printf("    %s\n    %s\n", cmdPath, vbsPath)
+	fmt.Printf("    %s\n", cmdPath)
 	fmt.Printf("    %s\n", psPath)
 	fmt.Println()
 
@@ -174,14 +170,16 @@ try {
 	}
 }
 
-func procesarAutomatico(year, month int, cfg Config, conProgreso bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("\n  *** PANIC GLOBAL: %v ***\n", r)
-		}
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
-	}()
+func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless bool) {
+	if !headless {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("\n  *** PANIC GLOBAL: %v ***\n", r)
+			}
+			fmt.Print("\nPresione Enter para salir...")
+			leerLinea()
+		}()
+	}
 
 	tStart := time.Now()
 

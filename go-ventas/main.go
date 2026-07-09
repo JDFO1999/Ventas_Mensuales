@@ -61,7 +61,7 @@ func main() {
 			mode = cfg.Modo
 		}
 		cfg := Config{Modo: mode, OutputDir: outputDir}
-		procesarAutomatico(year, month, cfg, false)
+		procesarAutomatico(year, month, cfg, false, true)
 		return
 	}
 
@@ -126,9 +126,7 @@ func ejecutarAutomaticoManual() {
 	}
 	fmt.Printf("  Modo lectura: %s | Output: %s\n\n", cfg.Modo, cfg.OutputDir)
 
-	procesarAutomatico(anio, mes, cfg, true)
-	fmt.Print("\nPresione Enter para continuar...")
-	leerLinea()
+	procesarAutomatico(anio, mes, cfg, true, false)
 }
 
 func menuNormal() {
