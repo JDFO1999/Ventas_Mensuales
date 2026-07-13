@@ -1,0 +1,135 @@
+[
+  {
+    "Codigo": "AK01",
+    "Nombre": "Alkosto 01 (San Felipe)",
+    "RutaIP": "10.11.1.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\AK01",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK02",
+    "Nombre": "Alkosto 02",
+    "RutaIP": "10.11.2.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak02\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK03",
+    "Nombre": "Alkosto 03",
+    "RutaIP": "10.11.3.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak03\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK04",
+    "Nombre": "Alkosto 04",
+    "RutaIP": "10.11.4.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak04\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK05",
+    "Nombre": "Alkosto 05",
+    "RutaIP": "10.11.5.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak05\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK06",
+    "Nombre": "Alkosto 06 (Cactus)",
+    "RutaIP": "10.11.6.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak06\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK07",
+    "Nombre": "Alkosto 07 (Bella Vista)",
+    "RutaIP": "10.11.7.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak07\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK08",
+    "Nombre": "Alkosto 08",
+    "RutaIP": "10.11.8.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak08\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "AK09",
+    "Nombre": "Alkosto 09",
+    "RutaIP": "10.11.9.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Ak09\\",
+    "Cia": "001"
+  },
+  {
+    "Codigo": "FC01",
+    "Nombre": "Familia Center 01",
+    "RutaIP": "10.12.1.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\FC01\\",
+    "Cia": "002"
+  },
+  {
+    "Codigo": "FC02",
+    "Nombre": "Familia Center 02",
+    "RutaIP": "10.12.2.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\FC02\\",
+    "Cia": "002"
+  },
+  {
+    "Codigo": "FC03",
+    "Nombre": "Familia Center 03",
+    "RutaIP": "10.12.3.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Fc03\\",
+    "Cia": "002"
+  },
+  {
+    "Codigo": "FC04",
+    "Nombre": "Familia Center 04",
+    "RutaIP": "10.12.4.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Fc04\\",
+    "Cia": "002"
+  },
+  {
+    "Codigo": "FC05",
+    "Nombre": "Familia Center 05",
+    "RutaIP": "10.12.5.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Fc05\\",
+    "Cia": "002"
+  },
+  {
+    "Codigo": "FC06",
+    "Nombre": "Familia Center 06",
+    "RutaIP": "10.12.6.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Fc06\\",
+    "Cia": "002"
+  },
+  {
+    "Codigo": "HC01",
+    "Nombre": "Hogar Center 01",
+    "RutaIP": "10.13.1.81",
+    "RutaDBF": "S:\\aBC-Soft\\Export\\HC01\\",
+    "Cia": "004"
+  },
+  {
+    "Codigo": "HC02",
+    "Nombre": "Hogar Center 02",
+    "RutaIP": "10.13.2.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\HC02\\",
+    "Cia": "004"
+  },
+  {
+    "Codigo": "VC01",
+    "Nombre": "Vecinos 01",
+    "RutaIP": "10.15.1.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Vc01\\",
+    "Cia": "003"
+  },
+  {
+    "Codigo": "VC02",
+    "Nombre": "Vecinos 02",
+    "RutaIP": "10.15.2.81",
+    "RutaDBF": "S:\\aBC-Soft\\Data\\Vc02\\",
+    "Cia": "003"
+  }
+]
