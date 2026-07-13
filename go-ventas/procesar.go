@@ -199,9 +199,14 @@ func ProcesarTienda(sucursal Sucursal, db *sql.DB, year, month int, modo string,
 
 		// Process from DBF
 		posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
-		if err != nil && modo == "S" && sucursal.RutaIP != "" {
-			fmt.Printf("\n  %s: S fallo, intentando IP...", codigo)
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+		if err != nil {
+			if modo == "S" && sucursal.RutaIP != "" {
+				fmt.Printf("\n  %s: S fallo, intentando IP...", codigo)
+				posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+			} else if modo == "IP" {
+				fmt.Printf("\n  %s: IP fallo, intentando S...", codigo)
+				posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+			}
 		}
 		if err != nil {
 			ch <- struct {

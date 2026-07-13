@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	_ "github.com/denisenkom/go-mssqldb"
@@ -35,7 +37,12 @@ func ObtenerSucursales(db *sql.DB) ([]Sucursal, error) {
 		ORDER BY cCodigo
 	`)
 	if err != nil {
-		return nil, err
+		fmt.Println("  SQL: tabla Sucursal no accesible, cargando respaldo local...")
+		s, errJSON := CargarSucursalesJSON()
+		if errJSON != nil {
+			return nil, fmt.Errorf("sin SQL ni respaldo: %v / %v", err, errJSON)
+		}
+		return s, nil
 	}
 	defer rows.Close()
 
@@ -54,7 +61,32 @@ func ObtenerSucursales(db *sql.DB) ([]Sucursal, error) {
 		s.Cia = strings.TrimSpace(cia.String)
 		sucursales = append(sucursales, s)
 	}
+
+	if len(sucursales) > 0 {
+		GuardarSucursalesJSON(sucursales)
+	}
+
 	return sucursales, nil
+}
+
+func GuardarSucursalesJSON(sucursales []Sucursal) {
+	data, err := json.MarshalIndent(sucursales, "", "  ")
+	if err != nil {
+		return
+	}
+	os.WriteFile("sucursales.json", data, 0644)
+}
+
+func CargarSucursalesJSON() ([]Sucursal, error) {
+	data, err := os.ReadFile("sucursales.json")
+	if err != nil {
+		return nil, err
+	}
+	var s []Sucursal
+	if err := json.Unmarshal(data, &s); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func CrearTablaPosVentas(db *sql.DB) error {
