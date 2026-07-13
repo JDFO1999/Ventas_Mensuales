@@ -142,10 +142,12 @@ $taskName = "VentasMensuales"
 $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/c "' + "%s" + '"')
 %s
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+$loggedUser = (Get-CimInstance -ClassName Win32_ComputerSystem).UserName
+$principal = New-ScheduledTaskPrincipal -UserId $loggedUser -LogonType Interactive -RunLevel Highest
 
 try {
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -RunLevel Highest
+    Register-ScheduledTask -TaskName $taskName -Principal $principal -Trigger $trigger -Action $action -Settings $settings
     %s
 } catch {
     Write-Host "ERROR: $_"
@@ -200,67 +202,52 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 
 	CrearTablaPosVentas(db)
 
-	dataSQL, err := LeerDatosDesdeSQL(db, year, month)
-	if err != nil {
-		dataSQL = make(map[string]map[int]VentaPorHora)
-	}
-
 	total := len(sucursales)
 	fmt.Printf("  %d tiendas a procesar\n", total)
 
-	resultados := make([]ResultadoTienda, total)
-	sqlCount := 0
-	var tasks []tareaTienda
+	tasks := make([]tareaTienda, total)
+	for i, s := range sucursales {
+		tasks[i] = tareaTienda{idx: i, suc: s}
+	}
 
+	procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+
+	fmt.Printf("[%s] Leyendo datos completos de SQL...\n", time.Now().Format("15:04:05"))
+	dataSQL, err := LeerDatosDesdeSQL(db, year, month)
+	if err != nil {
+		fmt.Printf("ERROR SQL: %v\n", err)
+		return
+	}
+
+	resultados := make([]ResultadoTienda, total)
+	totalFact := 0
 	for i, s := range sucursales {
 		codigo := s.Codigo
 		tiendaLetra := strings.ToUpper(string(codigo[0]))
+		tiendaData := dataSQL[codigo]
 
-		if tiendaData, ok := dataSQL[codigo]; ok && len(tiendaData) > 0 {
-			conteo := make(map[int]int)
-			totalV := 0.0
-			clientes := 0
-			for h, v := range tiendaData {
-				conteo[h] = v.Facturas
-				totalV += v.TotalUSD
-				clientes += v.Facturas
-			}
-			promedio := 0.0
-			if clientes > 0 {
-				promedio = totalV / float64(clientes)
-			}
-			hmKey, cm := maxKey(conteo)
-			hmiKey, cmi := minKey(conteo)
-
-			resultados[i] = ResultadoTienda{
-				Tienda: tiendaLetra, PromedioFactura: promedio,
-				Clientes: clientes, Total: totalV,
-				HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
-				HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
-			}
-			sqlCount++
-		} else {
-			tasks = append(tasks, tareaTienda{idx: i, suc: s})
+		conteo := make(map[int]int)
+		totalV := 0.0
+		clientes := 0
+		for h, v := range tiendaData {
+			conteo[h] = v.Facturas
+			totalV += v.TotalUSD
+			clientes += v.Facturas
 		}
-	}
-
-	if sqlCount > 0 {
-		fmt.Printf("  %d tiendas con datos en SQL (se saltara DBF)\n", sqlCount)
-	}
-
-	if len(tasks) > 0 {
-		fmt.Printf("  %d tiendas pendientes de DBF\n", len(tasks))
-		dbfResultados := procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
-		for i, r := range dbfResultados {
-			if r.Clientes > 0 || r.Tienda != "" {
-				resultados[i] = r
-			}
+		if clientes == 0 {
+			continue
 		}
-	}
+		promedio := totalV / float64(clientes)
+		hmKey, cm := maxKey(conteo)
+		hmiKey, cmi := minKey(conteo)
 
-	totalFact := 0
-	for _, r := range resultados {
-		totalFact += r.Clientes
+		resultados[i] = ResultadoTienda{
+			Tienda: tiendaLetra, PromedioFactura: promedio,
+			Clientes: clientes, Total: totalV,
+			HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
+			HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
+		}
+		totalFact += clientes
 	}
 	if totalFact == 0 {
 		fmt.Println("ADVERTENCIA: Sin datos.")
