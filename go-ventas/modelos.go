@@ -58,6 +58,46 @@ type VentaPorHora struct {
 	Facturas int
 }
 
+type VentaCARegistro struct {
+	Fecha    time.Time
+	Hora     int
+	Tienda   string
+	Caja     int
+	Tipo     string
+	STipo    string
+	Numero   string
+	Codigo   string
+	CodBar   string
+	Descrip  string
+	CodVen   string
+	Modelo   string
+	Serial   string
+	Cantidad float64
+	NCntd    float64
+	NPvpDol  float64
+	NPvp2Dol float64
+	NPvp3Dol float64
+	NPvpCop  float64
+	Precio   float64
+	NPrecio  float64
+	IGV      float64
+	NoDscto  bool
+	CodCli   string
+	Anulada  string
+	Depto    string
+	Familia  string
+	Costo    float64
+	NCosDol  float64
+	Pvpt     string
+	Oferta   bool
+	Devlto   float64
+	Margen   float64
+	PvpVen   float64
+	LPesado  bool
+	NroCie   string
+	FechaCie *time.Time
+}
+
 type tareaTienda struct {
 	idx int
 	suc Sucursal

@@ -149,3 +149,12 @@ func (d *DBFFile) FieldIndex(name string) int {
 	}
 	return -1
 }
+
+func (d *DBFFile) GetVarChar(record []byte, field DBFField) string {
+	start := field.Offset
+	end := start + field.Length
+	if end > len(record) {
+		end = len(record)
+	}
+	return strings.TrimRight(string(record[start:end]), "\x00 ")
+}

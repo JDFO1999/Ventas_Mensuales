@@ -95,6 +95,7 @@ func menuPrincipal() {
 		fmt.Println("  [1] Generar reporte manual")
 		fmt.Println("  [2] Configurar automatizacion")
 		fmt.Println("  [3] Ejecutar modo automatico")
+		fmt.Println("  [4] Generar reporte CA (detalle)")
 		fmt.Println("  [0] Salir")
 		fmt.Println()
 
@@ -106,6 +107,8 @@ func menuPrincipal() {
 			MenuConfig()
 		case 3:
 			ejecutarAutomaticoManual()
+		case 4:
+			menuCA()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
@@ -305,6 +308,87 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 	}
 
 	fmt.Printf("Tiempo total: %.1f minutos.\n", time.Since(tStart).Minutes())
+	fmt.Print("\nPresione Enter para salir...")
+	leerLinea()
+}
+
+func menuCA() {
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS")
+	fmt.Println(strings.Repeat("=", 60))
+
+	fmt.Println("\nConectando a SQL Server...")
+	db, err := ConectarSQL()
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+	defer db.Close()
+	fmt.Println("  Conexion exitosa.")
+
+	fmt.Println("\nObteniendo lista de sucursales...")
+	sucursales, err := ObtenerSucursales(db)
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
+
+	fmt.Println("\n" + strings.Repeat("-", 40))
+	mes := leerEntero("Mes (1-12): ")
+	if mes < 1 || mes > 12 {
+		fmt.Println("  ERROR: Mes fuera de rango.")
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+	anio := leerEntero("Ano (ej. 2026): ")
+	if anio < 2000 || anio > 2100 {
+		fmt.Println("  ERROR: Ano fuera de rango.")
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+
+	fmt.Println("\nModo de lectura:")
+	fmt.Println("  [1] Servidor S:")
+	fmt.Println("  [2] Tiendas IP")
+	modo := "IP"
+	if leerEntero("Seleccione: ") == 1 {
+		modo = "S"
+	}
+
+	fmt.Println("\n  Procesando CA...")
+	if err := ProcesarCA(db, sucursales, anio, mes, modo); err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+	}
+
+	fmt.Println("\nLeyendo datos desde SQL para Excel...")
+	registros, err := LeerDatosDesdeSQL_CA(db, anio, mes)
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+	fmt.Printf("  %d registros encontrados.\n", len(registros))
+
+	if len(registros) == 0 {
+		fmt.Println("  ADVERTENCIA: Sin datos CA en SQL.")
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+
+	fmt.Println("\nGenerando Excel CA...")
+	if err := GenerarExcelCA(registros, anio, mes, outputDir); err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+	}
+
 	fmt.Print("\nPresione Enter para salir...")
 	leerLinea()
 }

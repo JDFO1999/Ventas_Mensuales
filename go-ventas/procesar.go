@@ -444,3 +444,226 @@ func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, mon
 
 	return resultados
 }
+
+func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) ([]VentaCARegistro, error) {
+	dbf, err := OpenDBF(filepathCA)
+	if err != nil {
+		return nil, err
+	}
+	defer dbf.Close()
+
+	var registros []VentaCARegistro
+
+	for i := 0; i < dbf.NumRecords; i++ {
+		rec, err := dbf.ReadRecord(i)
+		if err != nil || len(rec) == 0 {
+			continue
+		}
+		if rec[0] == 0x2A {
+			continue
+		}
+
+		ti := dbf.FieldIndex("TIPO")
+		if ti < 0 {
+			continue
+		}
+		tipo := dbf.GetString(rec, dbf.Fields[ti])
+
+		ai := dbf.FieldIndex("ANULADA")
+		if ai >= 0 && dbf.GetString(rec, dbf.Fields[ai]) == "T" {
+			continue
+		}
+
+		diai := dbf.FieldIndex("DIA")
+		mesi := dbf.FieldIndex("MES")
+		anioi := dbf.FieldIndex("ANIO")
+		if diai < 0 || mesi < 0 || anioi < 0 {
+			continue
+		}
+
+		diaStr := dbf.GetString(rec, dbf.Fields[diai])
+		mesStr := dbf.GetString(rec, dbf.Fields[mesi])
+		anioStr := dbf.GetString(rec, dbf.Fields[anioi])
+
+		var dd, mm, yy int
+		fmt.Sscanf(diaStr, "%d", &dd)
+		fmt.Sscanf(mesStr, "%d", &mm)
+		fmt.Sscanf(anioStr, "%d", &yy)
+		if yy != year || mm != month {
+			continue
+		}
+
+		fecha := time.Date(yy, time.Month(mm), dd, 0, 0, 0, 0, time.UTC)
+
+		hi := dbf.FieldIndex("HORA24")
+		hora := 0
+		if hi >= 0 {
+			hora, _ = dbf.GetTime(rec, dbf.Fields[hi])
+		}
+
+		getStr := func(name string, def string) string {
+			if idx := dbf.FieldIndex(name); idx >= 0 {
+				return strings.TrimSpace(dbf.GetString(rec, dbf.Fields[idx]))
+			}
+			return def
+		}
+		getVc := func(name string, def string) string {
+			if idx := dbf.FieldIndex(name); idx >= 0 {
+				return strings.TrimSpace(dbf.GetVarChar(rec, dbf.Fields[idx]))
+			}
+			return def
+		}
+		getFl := func(name string) float64 {
+			if idx := dbf.FieldIndex(name); idx >= 0 {
+				return dbf.GetFloat(rec, dbf.Fields[idx])
+			}
+			return 0
+		}
+		getBo := func(name string) bool {
+			if idx := dbf.FieldIndex(name); idx >= 0 {
+				return dbf.GetBool(rec, dbf.Fields[idx])
+			}
+			return false
+		}
+
+		r := VentaCARegistro{
+			Fecha:    fecha,
+			Hora:     hora,
+			Tienda:   tienda,
+			Caja:     caja,
+			Tipo:     tipo,
+			STipo:    getStr("STIPO", ""),
+			Numero:   getStr("NUMERO", ""),
+			Codigo:   getStr("CODIGO", ""),
+			CodBar:   getStr("CODBAR", ""),
+			Descrip:  getVc("DESCRIP", ""),
+			CodVen:   getStr("CODVEN", ""),
+			Modelo:   getVc("MODELO", ""),
+			Serial:   getVc("SERIAL", ""),
+			Cantidad: getFl("CANTIDAD"),
+			NCntd:    getFl("NCNTD"),
+			NPvpDol:  getFl("NPVP_DOL"),
+			NPvp2Dol: getFl("NPVP2_DOL"),
+			NPvp3Dol: getFl("NPVP3_DOL"),
+			NPvpCop:  getFl("NPVP_COP"),
+			Precio:   getFl("PRECIO"),
+			NPrecio:  getFl("NPRECIO"),
+			IGV:      getFl("IGV"),
+			NoDscto:  getBo("NODSCTO"),
+			CodCli:   getStr("CODCLI", ""),
+			Anulada:  getStr("ANULADA", ""),
+			Depto:    getStr("DEPTO", ""),
+			Familia:  getStr("FAMILIA", ""),
+			Costo:    getFl("COSTO"),
+			NCosDol:  getFl("NCOS_DOL"),
+			Pvpt:     getStr("PVPT", ""),
+			Oferta:   getBo("OFERTA"),
+			Devlto:   getFl("DEVLTO"),
+			Margen:   getFl("MARGEN"),
+			PvpVen:   getFl("PVPVEN"),
+			LPesado:  getBo("LPESADO"),
+			NroCie:   getStr("NRO_CIE", ""),
+		}
+		if dci := dbf.FieldIndex("DATE_CIE"); dci >= 0 {
+			if dt, ok := dbf.GetDate(rec, dbf.Fields[dci]); ok {
+				r.FechaCie = &dt
+			}
+		}
+		registros = append(registros, r)
+	}
+	return registros, nil
+}
+
+func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo string) error {
+	codigo := sucursal.Codigo
+
+	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && sucursal.RutaIP != "" {
+			fmt.Printf("\n  %s: S fallo, intentando IP...", codigo)
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+		} else if modo == "IP" {
+			fmt.Printf("\n  %s: IP fallo, intentando S...", codigo)
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("FALLO ruta: %v", err)
+	}
+
+	totalInsert := 0
+	for _, dirName := range posDirs {
+		posNum, err := strconv.Atoi(dirName[3:])
+		if err != nil {
+			continue
+		}
+
+		var posPath string
+		if modo == "S" {
+			if sucursal.RutaDBF != "" {
+				posPath = strings.TrimRight(sucursal.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", sucursal.RutaIP, dirName)
+		}
+
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
+
+		if _, err := os.Stat(dbfPath); err != nil {
+			continue
+		}
+
+		tStart := time.Now()
+		regs, err := LeerArchivoCA(dbfPath, year, month, codigo, posNum)
+		tElapsed := time.Since(tStart)
+
+		if err != nil || len(regs) == 0 {
+			if len(regs) == 0 {
+				fmt.Printf("\n  [CA %s] sin datos (%.1fs)", filepath.Base(dbfPath), tElapsed.Seconds())
+			}
+			continue
+		}
+
+		if err := InsertarVentasCA(db, regs); err != nil {
+			fmt.Printf("\n  [CA %s] ERROR insert: %v", filepath.Base(dbfPath), err)
+			continue
+		}
+		totalInsert += len(regs)
+
+		fileSize := 0.0
+		if info, err := os.Stat(dbfPath); err == nil {
+			fileSize = float64(info.Size()) / (1024 * 1024)
+		}
+		fmt.Printf("\n  [CA %s] %d regs, %.1f MB, %.1fs",
+			filepath.Base(dbfPath), len(regs), fileSize, tElapsed.Seconds())
+	}
+
+	if totalInsert == 0 {
+		return fmt.Errorf("sin datos")
+	}
+	return nil
+}
+
+func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string) error {
+	CrearTablaPosVentasCA(db)
+
+	total := len(sucursales)
+	fmt.Printf("  %d tiendas a procesar (CA)\n", total)
+	tStart := time.Now()
+
+	errores := 0
+	for i, s := range sucursales {
+		fmt.Printf("\n[%d/%d] %s - %s", i+1, total, s.Codigo, s.Nombre)
+		if err := ProcesarTiendaCA(s, db, year, month, modo); err != nil {
+			fmt.Printf("\n  %v\n", err)
+			errores++
+		} else {
+			fmt.Println()
+		}
+	}
+
+	fmt.Printf("\n  Listo. Errores: %d. Tiempo: %.1f min.\n", errores, time.Since(tStart).Minutes())
+	return nil
+}

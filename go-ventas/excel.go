@@ -139,3 +139,142 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 	fmt.Printf("\nArchivo guardado: %s\n", outputPath)
 	return nil
 }
+
+func GenerarExcelCA(registros []VentaCARegistro, year, month int, outputDir string) error {
+	nombreMes := MesesES[month]
+
+	f := excelize.NewFile()
+	defer f.Close()
+
+	ws := "Sheet1"
+	f.SetSheetName(ws, "CA_"+nombreMes)
+	ws = "CA_" + nombreMes
+
+	titleStyle, _ := f.NewStyle(&excelize.Style{
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
+		Font:      &excelize.Font{Bold: true, Size: 16, Color: "FFFFFF", Family: "Calibri"},
+		Alignment: &excelize.Alignment{Horizontal: "center"},
+	})
+	f.SetCellValue(ws, "A1", fmt.Sprintf("DETALLE CA - %s %d (%d registros)", nombreMes, year, len(registros)))
+	f.MergeCell(ws, "A1", "AM1")
+	f.SetCellStyle(ws, "A1", "AM1", titleStyle)
+	f.SetRowHeight(ws, 1, 25)
+
+	hdStyle, _ := f.NewStyle(&excelize.Style{
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
+		Font:      &excelize.Font{Bold: true, Size: 10, Color: "FFFFFF", Family: "Calibri"},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center", WrapText: true},
+	})
+
+	headers := []string{
+		"Tienda", "Caja", "Fecha", "Hora", "Tipo", "STipo", "Numero", "Codigo", "CodBar", "Descripcion",
+		"CodVen", "Modelo", "Serial", "Cantidad", "NCntd", "NPvpDol", "NPvp2Dol", "NPvp3Dol", "NPvpCop",
+		"Precio", "NPrecio", "IGV", "NoDscto", "CodCli", "Anulada", "Depto", "Familia",
+		"Costo", "NCosDol", "Pvpt", "Oferta", "Devlto", "Margen", "PvpVen", "LPesado", "NroCie", "FechaCie",
+	}
+	for i, h := range headers {
+		col, _ := excelize.ColumnNumberToName(i + 1)
+		cell := fmt.Sprintf("%s2", col)
+		f.SetCellValue(ws, cell, h)
+		f.SetCellStyle(ws, cell, cell, hdStyle)
+	}
+	f.SetRowHeight(ws, 2, 30)
+
+	bodStyle, _ := f.NewStyle(&excelize.Style{
+		Border: []excelize.Border{
+			{Type: "left", Color: "D0D0D0", Style: 1},
+			{Type: "top", Color: "D0D0D0", Style: 1},
+			{Type: "right", Color: "D0D0D0", Style: 1},
+			{Type: "bottom", Color: "D0D0D0", Style: 1},
+		},
+		Font:   &excelize.Font{Size: 9, Family: "Calibri"},
+		NumFmt: 2,
+	})
+
+	intStyle, _ := f.NewStyle(&excelize.Style{
+		Border: []excelize.Border{
+			{Type: "left", Color: "D0D0D0", Style: 1},
+			{Type: "top", Color: "D0D0D0", Style: 1},
+			{Type: "right", Color: "D0D0D0", Style: 1},
+			{Type: "bottom", Color: "D0D0D0", Style: 1},
+		},
+		Font:   &excelize.Font{Size: 9, Family: "Calibri"},
+		NumFmt: 3,
+	})
+
+	row := 3
+	for _, r := range registros {
+		col := func(c int) string {
+			name, _ := excelize.ColumnNumberToName(c)
+			return fmt.Sprintf("%s%d", name, row)
+		}
+
+		f.SetCellValue(ws, col(1), r.Tienda)
+		f.SetCellValue(ws, col(2), r.Caja)
+		f.SetCellValue(ws, col(3), r.Fecha.Format("02/01/2006"))
+		f.SetCellValue(ws, col(4), formatoHora(r.Hora))
+		f.SetCellValue(ws, col(5), r.Tipo)
+		f.SetCellValue(ws, col(6), r.STipo)
+		f.SetCellValue(ws, col(7), r.Numero)
+		f.SetCellValue(ws, col(8), r.Codigo)
+		f.SetCellValue(ws, col(9), r.CodBar)
+		f.SetCellValue(ws, col(10), r.Descrip)
+		f.SetCellValue(ws, col(11), r.CodVen)
+		f.SetCellValue(ws, col(12), r.Modelo)
+		f.SetCellValue(ws, col(13), r.Serial)
+		f.SetCellValue(ws, col(14), r.Cantidad)
+		f.SetCellValue(ws, col(15), r.NCntd)
+		f.SetCellValue(ws, col(16), r.NPvpDol)
+		f.SetCellValue(ws, col(17), r.NPvp2Dol)
+		f.SetCellValue(ws, col(18), r.NPvp3Dol)
+		f.SetCellValue(ws, col(19), r.NPvpCop)
+		f.SetCellValue(ws, col(20), r.Precio)
+		f.SetCellValue(ws, col(21), r.NPrecio)
+		f.SetCellValue(ws, col(22), r.IGV)
+		f.SetCellValue(ws, col(23), r.NoDscto)
+		f.SetCellValue(ws, col(24), r.CodCli)
+		f.SetCellValue(ws, col(25), r.Anulada)
+		f.SetCellValue(ws, col(26), r.Depto)
+		f.SetCellValue(ws, col(27), r.Familia)
+		f.SetCellValue(ws, col(28), r.Costo)
+		f.SetCellValue(ws, col(29), r.NCosDol)
+		f.SetCellValue(ws, col(30), r.Pvpt)
+		f.SetCellValue(ws, col(31), r.Oferta)
+		f.SetCellValue(ws, col(32), r.Devlto)
+		f.SetCellValue(ws, col(33), r.Margen)
+		f.SetCellValue(ws, col(34), r.PvpVen)
+		f.SetCellValue(ws, col(35), r.LPesado)
+		f.SetCellValue(ws, col(36), r.NroCie)
+		if r.FechaCie != nil {
+			f.SetCellValue(ws, col(37), r.FechaCie.Format("02/01/2006"))
+		}
+
+		for c := 1; c <= 37; c++ {
+			cellRef := col(c)
+			if c == 14 || c == 15 || c == 16 || c == 17 || c == 18 || c == 19 || c == 20 || c == 21 || c == 22 || c == 28 || c == 29 || c == 32 || c == 33 || c == 34 {
+				f.SetCellStyle(ws, cellRef, cellRef, bodStyle)
+			} else {
+				f.SetCellStyle(ws, cellRef, cellRef, intStyle)
+			}
+		}
+		row++
+	}
+
+	for c := 1; c <= 37; c++ {
+		colName, _ := excelize.ColumnNumberToName(c)
+		f.SetColWidth(ws, colName, colName, 14)
+	}
+	f.SetColWidth(ws, "J", "J", 40)
+
+	outputPath := fmt.Sprintf("%s\\Ventas_CA_%s_%d.xlsx", outputDir, nombreMes, year)
+	if err := f.SaveAs(outputPath); err != nil {
+		return err
+	}
+	fmt.Printf("\nArchivo CA guardado: %s\n", outputPath)
+	return nil
+}
+
+func mustColumn(n int) string {
+	name, _ := excelize.ColumnNumberToName(n)
+	return name
+}
