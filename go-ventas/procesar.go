@@ -656,17 +656,63 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	fmt.Printf("  %d tiendas a procesar (CA)\n", total)
 	tStart := time.Now()
 
-	errores := 0
+	tasks := make([]tareaTienda, total)
 	for i, s := range sucursales {
-		fmt.Printf("\n[%d/%d] %s - %s", i+1, total, s.Codigo, s.Nombre)
-		if err := ProcesarTiendaCA(s, db, year, month, modo); err != nil {
-			fmt.Printf("\n  %v\n", err)
-			errores++
-		} else {
-			fmt.Println()
+		tasks[i] = tareaTienda{idx: i, suc: s}
+	}
+
+	pendientes := make([]tareaTienda, total)
+	copy(pendientes, tasks)
+
+	maxRetries := 3
+
+	for attempt := 0; attempt < maxRetries && len(pendientes) > 0; attempt++ {
+		if attempt > 0 {
+			fmt.Printf("\n  >>> REINTENTO CA %d: %d tiendas pendientes...\n", attempt, len(pendientes))
+		}
+
+		type caRes struct {
+			tt    tareaTienda
+			fallo bool
+		}
+
+		var nuevosPendientes []tareaTienda
+		var mu sync.Mutex
+		var wg sync.WaitGroup
+
+		for _, t := range pendientes {
+			wg.Add(1)
+			go func(tt tareaTienda) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						mu.Lock()
+						nuevosPendientes = append(nuevosPendientes, tt)
+						mu.Unlock()
+						fmt.Printf("\n  %s - PANIC CA: %v\n", tt.suc.Codigo, r)
+					}
+				}()
+
+				fmt.Printf("\n[%d/%d] %s - %s", tt.idx+1, total, tt.suc.Codigo, tt.suc.Nombre)
+				if err := ProcesarTiendaCA(tt.suc, db, year, month, modo); err != nil {
+					mu.Lock()
+					nuevosPendientes = append(nuevosPendientes, tt)
+					mu.Unlock()
+				}
+			}(t)
+		}
+
+		wg.Wait()
+		pendientes = nuevosPendientes
+	}
+
+	if len(pendientes) > 0 {
+		fmt.Printf("\n  *** ADVERTENCIA CA: %d tiendas sin procesar tras %d intentos ***\n", len(pendientes), maxRetries)
+		for _, t := range pendientes {
+			fmt.Printf("    - %s\n", t.suc.Codigo)
 		}
 	}
 
-	fmt.Printf("\n  Listo. Errores: %d. Tiempo: %.1f min.\n", errores, time.Since(tStart).Minutes())
+	fmt.Printf("\n  CA listo. Tiempo: %.1f min.\n", time.Since(tStart).Minutes())
 	return nil
 }
