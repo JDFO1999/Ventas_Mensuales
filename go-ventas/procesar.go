@@ -489,7 +489,10 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 		fmt.Sscanf(diaStr, "%d", &dd)
 		fmt.Sscanf(mesStr, "%d", &mm)
 		fmt.Sscanf(anioStr, "%d", &yy)
-		if yy != year || mm != month {
+		if month > 0 && (yy != year || mm != month) {
+			continue
+		}
+		if yy != year {
 			continue
 		}
 

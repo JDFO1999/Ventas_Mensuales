@@ -140,22 +140,30 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 	return nil
 }
 
-func GenerarExcelCA(registros []VentaCARegistro, year, month int, outputDir string) error {
-	nombreMes := MesesES[month]
+func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir string) error {
+	nombreMes := MesesES[mesHasta]
+	tituloMes := nombreMes
+	if mesHasta > 1 {
+		tituloMes = "ENERO_" + nombreMes
+	}
 
 	f := excelize.NewFile()
 	defer f.Close()
 
 	ws := "Sheet1"
-	f.SetSheetName(ws, "CA_"+nombreMes)
-	ws = "CA_" + nombreMes
+	f.SetSheetName(ws, "CA_"+tituloMes)
+	ws = "CA_" + tituloMes
 
 	titleStyle, _ := f.NewStyle(&excelize.Style{
 		Fill:      excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
 		Font:      &excelize.Font{Bold: true, Size: 16, Color: "FFFFFF", Family: "Calibri"},
 		Alignment: &excelize.Alignment{Horizontal: "center"},
 	})
-	f.SetCellValue(ws, "A1", fmt.Sprintf("DETALLE CA - %s %d (%d registros)", nombreMes, year, len(registros)))
+	tituloRango := fmt.Sprintf("DETALLE CA - %s a %s %d (%d registros)", MesesES[1], nombreMes, year, len(registros))
+	if mesHasta == 1 {
+		tituloRango = fmt.Sprintf("DETALLE CA - %s %d (%d registros)", nombreMes, year, len(registros))
+	}
+	f.SetCellValue(ws, "A1", tituloRango)
 	f.MergeCell(ws, "A1", "AM1")
 	f.SetCellStyle(ws, "A1", "AM1", titleStyle)
 	f.SetRowHeight(ws, 1, 25)
@@ -266,7 +274,7 @@ func GenerarExcelCA(registros []VentaCARegistro, year, month int, outputDir stri
 	}
 	f.SetColWidth(ws, "J", "J", 40)
 
-	outputPath := fmt.Sprintf("%s\\Ventas_CA_%s_%d.xlsx", outputDir, nombreMes, year)
+	outputPath := fmt.Sprintf("%s\\Ventas_CA_%s_%d.xlsx", outputDir, tituloMes, year)
 	if err := f.SaveAs(outputPath); err != nil {
 		return err
 	}

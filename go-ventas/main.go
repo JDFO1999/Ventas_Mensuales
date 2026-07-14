@@ -314,7 +314,7 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 
 func menuCA() {
 	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS")
+	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS (ENERO A JULIO)")
 	fmt.Println(strings.Repeat("=", 60))
 
 	fmt.Println("\nConectando a SQL Server...")
@@ -338,14 +338,6 @@ func menuCA() {
 	}
 	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
 
-	fmt.Println("\n" + strings.Repeat("-", 40))
-	mes := leerEntero("Mes (1-12): ")
-	if mes < 1 || mes > 12 {
-		fmt.Println("  ERROR: Mes fuera de rango.")
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
-		return
-	}
 	anio := leerEntero("Ano (ej. 2026): ")
 	if anio < 2000 || anio > 2100 {
 		fmt.Println("  ERROR: Ano fuera de rango.")
@@ -362,22 +354,26 @@ func menuCA() {
 		modo = "S"
 	}
 
-	fmt.Println("\n  Procesando CA...")
-	if err := ProcesarCA(db, sucursales, anio, mes, modo); err != nil {
+	mesActual := int(time.Now().Month())
+	fmt.Printf("\n  Procesando CA (todo el ano %d, meses 1 a %d)...\n", anio, mesActual)
+	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
-	fmt.Println("\nLeyendo datos desde SQL para Excel...")
-	registros, err := LeerDatosDesdeSQL_CA(db, anio, mes)
-	if err != nil {
-		fmt.Printf("  ERROR: %v\n", err)
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
-		return
+	fmt.Println("\nLeyendo datos desde SQL (Enero a " + MesesES[mesActual] + ")...")
+	var todos []VentaCARegistro
+	for m := 1; m <= mesActual; m++ {
+		regs, err := LeerDatosDesdeSQL_CA(db, anio, m)
+		if err != nil {
+			fmt.Printf("  ERROR mes %d: %v\n", m, err)
+			continue
+		}
+		todos = append(todos, regs...)
+		fmt.Printf("  %s: %d registros\n", MesesES[m], len(regs))
 	}
-	fmt.Printf("  %d registros encontrados.\n", len(registros))
+	fmt.Printf("  TOTAL: %d registros\n", len(todos))
 
-	if len(registros) == 0 {
+	if len(todos) == 0 {
 		fmt.Println("  ADVERTENCIA: Sin datos CA en SQL.")
 		fmt.Print("\nPresione Enter para salir...")
 		leerLinea()
@@ -385,7 +381,7 @@ func menuCA() {
 	}
 
 	fmt.Println("\nGenerando Excel CA...")
-	if err := GenerarExcelCA(registros, anio, mes, outputDir); err != nil {
+	if err := GenerarExcelCA(todos, anio, mesActual, outputDir); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
