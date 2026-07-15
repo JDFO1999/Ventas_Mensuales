@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
+	"github.com/xuri/excelize/v2"
 )
 
 const (
@@ -434,7 +434,7 @@ func LeerDatosCA_Tienda(db *sql.DB, codigo string, year, mesHasta int) ([]VentaC
 	return registros, rows.Err()
 }
 
-func GenerarCSV_CA(db *sql.DB, tiendas []string, tipo, codigo string, fechaIni, fechaFin string, w io.Writer) (int, error) {
+func GenerarExcelCA_Stream(db *sql.DB, tiendas []string, tipo, codigo string, fechaIni, fechaFin string, outputPath string) (int, error) {
 	query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
 		FROM Pos_Ventas_CA
 		WHERE 1=1`
@@ -471,25 +471,69 @@ func GenerarCSV_CA(db *sql.DB, tiendas []string, tipo, codigo string, fechaIni, 
 	}
 	defer rows.Close()
 
-	io.WriteString(w, "TIENDA,TIPO,NUMERO,CODIGO,DESCRIPCION,CANTIDAD,FECHA\n")
+	f := excelize.NewFile()
+	defer f.Close()
+
+	ws := "CA"
+	index, _ := f.NewSheet(ws)
+	f.SetActiveSheet(index)
+	f.DeleteSheet("Sheet1")
+
+	sw, err := f.NewStreamWriter(ws)
+	if err != nil {
+		return 0, err
+	}
+
+	headers := []interface{}{"TIENDA", "TIPO", "NUMERO", "CODIGO", "DESCRIPCION", "CANTIDAD", "FECHA"}
+	if err := sw.SetRow("A1", headers); err != nil {
+		return 0, err
+	}
+
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
+		Font: &excelize.Font{Bold: true, Size: 11, Color: "FFFFFF"},
+	})
+	f.SetCellStyle(ws, "A1", "G1", headerStyle)
+
 	count := 0
+	rowNum := 2
 	var tienda, tipoVal, numero, codigoVal, descrip string
 	var cantidad float64
 	var fecha time.Time
 
 	for rows.Next() {
 		if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
+			sw.Flush()
 			return count, err
 		}
-		descrip = strings.ReplaceAll(descrip, ",", " ")
-		line := fmt.Sprintf("%s,%s,%s,%s,%s,%.3f,%s\n",
-			tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006"))
-		io.WriteString(w, line)
+		descrip = strings.ReplaceAll(descrip, ";", " ")
+		cell, _ := excelize.CoordinatesToCellName(1, rowNum)
+		row := []interface{}{tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006")}
+		if err := sw.SetRow(cell, row); err != nil {
+			sw.Flush()
+			return count, err
+		}
 		count++
+		rowNum++
 		if count%50000 == 0 {
-			fmt.Printf("\r  CSV: %d filas...", count)
+			fmt.Printf("\r  Excel: %d filas...", count)
 		}
 	}
-	fmt.Printf("\r  CSV: %d filas exportadas.\n", count)
+
+	if err := sw.Flush(); err != nil {
+		return count, err
+	}
+
+	for c := 1; c <= 7; c++ {
+		col, _ := excelize.ColumnNumberToName(c)
+		f.SetColWidth(ws, col, col, 18)
+	}
+	f.SetColWidth(ws, "E", "E", 50)
+
+	if err := f.SaveAs(outputPath); err != nil {
+		return count, err
+	}
+
+	fmt.Printf("\r  Excel: %d filas exportadas.\n", count)
 	return count, rows.Err()
 }

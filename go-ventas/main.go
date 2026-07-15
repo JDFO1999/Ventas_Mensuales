@@ -313,6 +313,13 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 }
 
 func menuCA() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("\n  *** PANIC: %v ***\n", r)
+		}
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+	}()
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS")
 	fmt.Println(strings.Repeat("=", 60))
@@ -321,8 +328,6 @@ func menuCA() {
 	db, err := ConectarSQL()
 	if err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
 		return
 	}
 	defer db.Close()
@@ -332,8 +337,6 @@ func menuCA() {
 	sucursales, err := ObtenerSucursales(db)
 	if err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
 		return
 	}
 	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
@@ -436,8 +439,8 @@ func menuCA() {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
-	// --- GENERAR CSV ---
-	fmt.Println("\nGenerando CSV...")
+	// --- GENERAR EXCEL ---
+	fmt.Println("\nGenerando Excel...")
 	var filtroTipo string
 	switch tipoFiltro {
 	case "FA": filtroTipo = "FA"
@@ -459,24 +462,12 @@ func menuCA() {
 	if opFecha == 1 || opFecha == 2 {
 		nombreArchivo += "_" + strings.ReplaceAll(fechaIni[:7], "-", "")
 	}
-	outputPath := fmt.Sprintf("%s\\%s.csv", outputDir, nombreArchivo)
+	outputPath := fmt.Sprintf("%s\\%s.xlsx", outputDir, nombreArchivo)
 
-	f, err := os.Create(outputPath)
+	count, err := GenerarExcelCA_Stream(db, tiendasCod, filtroTipo, codigoFiltro, fechaIni, fechaFin, outputPath)
 	if err != nil {
-		fmt.Printf("  ERROR creando archivo: %v\n", err)
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
-		return
-	}
-	defer f.Close()
-
-	count, err := GenerarCSV_CA(db, tiendasCod, filtroTipo, codigoFiltro, fechaIni, fechaFin, f)
-	if err != nil {
-		fmt.Printf("  ERROR CSV: %v\n", err)
+		fmt.Printf("  ERROR Excel: %v\n", err)
 	} else {
 		fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
 	}
-
-	fmt.Print("\nPresione Enter para salir...")
-	leerLinea()
 }
