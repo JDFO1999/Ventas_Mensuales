@@ -400,30 +400,41 @@ func menuCA() {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
-	fmt.Println("\nLeyendo datos desde SQL (Enero a " + MesesES[mesActual] + ")...")
-	var todos []VentaCARegistro
-	for m := 1; m <= mesActual; m++ {
-		regs, err := LeerDatosDesdeSQL_CA(db, anio, m)
+	fmt.Println("\nGenerando Excel CA (por tienda)...")
+	f, ws, tituloMes, row := IniciarExcelCA(anio, mesActual)
+	totalRegs := 0
+	for _, s := range sucursales {
+		fmt.Printf("\r  [%s] leyendo SQL...", s.Codigo)
+		regs, err := LeerDatosCA_Tienda(db, s.Codigo, anio, mesActual)
 		if err != nil {
-			fmt.Printf("  ERROR mes %d: %v\n", m, err)
+			fmt.Printf("\n  %s: ERROR %v\n", s.Codigo, err)
 			continue
 		}
-		todos = append(todos, regs...)
-		fmt.Printf("  %s: %d registros\n", MesesES[m], len(regs))
+		if len(regs) == 0 {
+			continue
+		}
+		fmt.Printf("\r  [%s] %d regs escribiendo...", s.Codigo, len(regs))
+		row = AppendTiendaCA(f, ws, regs, row)
+		totalRegs += len(regs)
+		regs = nil
 	}
-	fmt.Printf("  TOTAL: %d registros\n", len(todos))
+	fmt.Println()
 
-	if len(todos) == 0 {
+	if totalRegs == 0 {
+		f.Close()
 		fmt.Println("  ADVERTENCIA: Sin datos CA en SQL.")
 		fmt.Print("\nPresione Enter para salir...")
 		leerLinea()
 		return
 	}
 
-	fmt.Println("\nGenerando Excel CA...")
-	if err := GenerarExcelCA(todos, anio, mesActual, outputDir); err != nil {
+	outputPath := fmt.Sprintf("%s\\Ventas_CA_%s_%d.xlsx", outputDir, tituloMes, anio)
+	if err := f.SaveAs(outputPath); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
+	} else {
+		fmt.Printf("  Archivo CA guardado: %s (%d registros)\n", outputPath, totalRegs)
 	}
+	f.Close()
 
 	fmt.Print("\nPresione Enter para salir...")
 	leerLinea()

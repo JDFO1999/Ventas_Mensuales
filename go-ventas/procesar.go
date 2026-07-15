@@ -653,9 +653,15 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	finalErrores := 0
 
 	for i, s := range sucursales {
-		if TiendaPosCompletosCA(db, s.Codigo, year) {
+		cajasReales := 0
+		if dirs, err := ListarPOS(s.Codigo, s.RutaIP, s.RutaDBF, modo); err == nil {
+			cajasReales = len(dirs)
+		}
+		cajasSQL := ContarCajasSQL(db, s.Codigo, year)
+
+		if cajasSQL >= cajasReales && cajasReales > 0 {
 			completadas++
-			fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d  %s ya en SQL", completadas, total, s.Codigo)))
+			fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d  %s ok SQL", completadas, total, s.Codigo)))
 			continue
 		}
 

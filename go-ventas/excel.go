@@ -140,7 +140,7 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 	return nil
 }
 
-func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir string) error {
+func IniciarExcelCA(year, mesHasta int) (*excelize.File, string, string, int) {
 	nombreMes := MesesES[mesHasta]
 	tituloMes := nombreMes
 	if mesHasta > 1 {
@@ -148,7 +148,6 @@ func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir s
 	}
 
 	f := excelize.NewFile()
-	defer f.Close()
 
 	ws := "Sheet1"
 	f.SetSheetName(ws, "CA_"+tituloMes)
@@ -159,11 +158,10 @@ func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir s
 		Font:      &excelize.Font{Bold: true, Size: 16, Color: "FFFFFF", Family: "Calibri"},
 		Alignment: &excelize.Alignment{Horizontal: "center"},
 	})
-	tituloRango := fmt.Sprintf("DETALLE CA - %s a %s %d (%d registros)", MesesES[1], nombreMes, year, len(registros))
+	f.SetCellValue(ws, "A1", fmt.Sprintf("DETALLE CA - %s a %s %d", MesesES[1], nombreMes, year))
 	if mesHasta == 1 {
-		tituloRango = fmt.Sprintf("DETALLE CA - %s %d (%d registros)", nombreMes, year, len(registros))
+		f.SetCellValue(ws, "A1", fmt.Sprintf("DETALLE CA - %s %d", nombreMes, year))
 	}
-	f.SetCellValue(ws, "A1", tituloRango)
 	f.MergeCell(ws, "A1", "AM1")
 	f.SetCellStyle(ws, "A1", "AM1", titleStyle)
 	f.SetRowHeight(ws, 1, 25)
@@ -188,6 +186,16 @@ func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir s
 	}
 	f.SetRowHeight(ws, 2, 30)
 
+	for c := 1; c <= 37; c++ {
+		colName, _ := excelize.ColumnNumberToName(c)
+		f.SetColWidth(ws, colName, colName, 14)
+	}
+	f.SetColWidth(ws, "J", "J", 40)
+
+	return f, ws, tituloMes, 3
+}
+
+func AppendTiendaCA(f *excelize.File, ws string, registros []VentaCARegistro, row int) int {
 	bodStyle, _ := f.NewStyle(&excelize.Style{
 		Border: []excelize.Border{
 			{Type: "left", Color: "D0D0D0", Style: 1},
@@ -210,7 +218,6 @@ func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir s
 		NumFmt: 3,
 	})
 
-	row := 3
 	for _, r := range registros {
 		col := func(c int) string {
 			name, _ := excelize.ColumnNumberToName(c)
@@ -267,19 +274,7 @@ func GenerarExcelCA(registros []VentaCARegistro, year, mesHasta int, outputDir s
 		}
 		row++
 	}
-
-	for c := 1; c <= 37; c++ {
-		colName, _ := excelize.ColumnNumberToName(c)
-		f.SetColWidth(ws, colName, colName, 14)
-	}
-	f.SetColWidth(ws, "J", "J", 40)
-
-	outputPath := fmt.Sprintf("%s\\Ventas_CA_%s_%d.xlsx", outputDir, tituloMes, year)
-	if err := f.SaveAs(outputPath); err != nil {
-		return err
-	}
-	fmt.Printf("\nArchivo CA guardado: %s\n", outputPath)
-	return nil
+	return row
 }
 
 func mustColumn(n int) string {

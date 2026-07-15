@@ -379,32 +379,54 @@ func LeerDatosDesdeSQL_CA(db *sql.DB, year, month int) ([]VentaCARegistro, error
 	return registros, rows.Err()
 }
 
-func TiendaPosCompletosCA(db *sql.DB, codigo string, year int) bool {
-	rows, err := db.Query("SELECT DISTINCT Caja FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=? ORDER BY Caja", codigo, year)
+func ContarCajasSQL(db *sql.DB, codigo string, year int) int {
+	var count int
+	err := db.QueryRow("SELECT COUNT(DISTINCT Caja) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=?", codigo, year).Scan(&count)
 	if err != nil {
-		return false
+		return 0
+	}
+	return count
+}
+
+func LeerDatosCA_Tienda(db *sql.DB, codigo string, year, mesHasta int) ([]VentaCARegistro, error) {
+	rows, err := db.Query(`
+		SELECT Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip,
+			CodVen, Modelo, Serial, Cantidad, NCntd, NPvpDol, NPvp2Dol, NPvp3Dol, NPvpCop,
+			Precio, NPrecio, IGV, NoDscto, CodCli, Anulada, Depto, Familia,
+			Costo, NCosDol, Pvpt, Oferta, Devlto, Margen, PvpVen, LPesado, NroCie, FechaCie
+		FROM Pos_Ventas_CA
+		WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha) BETWEEN 1 AND ?
+	`, codigo, year, mesHasta)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 
-	var cajas []int
+	var registros []VentaCARegistro
 	for rows.Next() {
-		var c int
-		if err := rows.Scan(&c); err != nil {
-			return false
+		var r VentaCARegistro
+		var fechaCie sql.NullTime
+		var codBar, modelo, serial, codCli, anulada, pvpt, nroCie sql.NullString
+		if err := rows.Scan(&r.Fecha, &r.Hora, &r.Tienda, &r.Caja, &r.Tipo, &r.STipo, &r.Numero,
+			&r.Codigo, &codBar, &r.Descrip, &r.CodVen, &modelo, &serial,
+			&r.Cantidad, &r.NCntd, &r.NPvpDol, &r.NPvp2Dol, &r.NPvp3Dol, &r.NPvpCop,
+			&r.Precio, &r.NPrecio, &r.IGV, &r.NoDscto, &codCli, &anulada, &r.Depto, &r.Familia,
+			&r.Costo, &r.NCosDol, &pvpt, &r.Oferta, &r.Devlto, &r.Margen, &r.PvpVen,
+			&r.LPesado, &nroCie, &fechaCie); err != nil {
+			return nil, err
 		}
-		cajas = append(cajas, c)
-	}
-	if len(cajas) < 3 {
-		return false
-	}
-
-	muestras := []int{cajas[0], cajas[len(cajas)/2], cajas[len(cajas)-1]}
-	for _, c := range muestras {
-		var count int
-		err := db.QueryRow("SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=? AND Caja=?", codigo, year, c).Scan(&count)
-		if err != nil || count == 0 {
-			return false
+		r.CodBar = codBar.String
+		r.Modelo = modelo.String
+		r.Serial = serial.String
+		r.CodCli = codCli.String
+		r.Anulada = anulada.String
+		r.Pvpt = pvpt.String
+		r.NroCie = nroCie.String
+		if fechaCie.Valid {
+			t := fechaCie.Time
+			r.FechaCie = &t
 		}
+		registros = append(registros, r)
 	}
-	return true
+	return registros, rows.Err()
 }
