@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 )
@@ -427,4 +429,64 @@ func LeerDatosCA_Tienda(db *sql.DB, codigo string, year, mesHasta int) ([]VentaC
 		registros = append(registros, r)
 	}
 	return registros, rows.Err()
+}
+
+func GenerarCSV_CA(db *sql.DB, tiendas []string, tipo, codigo string, fechaIni, fechaFin string, w io.Writer) (int, error) {
+	query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
+		FROM Pos_Ventas_CA
+		WHERE 1=1`
+	var args []interface{}
+
+	if len(tiendas) > 0 {
+		placeholders := make([]string, len(tiendas))
+		for i, t := range tiendas {
+			placeholders[i] = "?"
+			args = append(args, t)
+		}
+		query += " AND Tienda IN (" + strings.Join(placeholders, ",") + ")"
+	}
+	if tipo != "" {
+		query += " AND Tipo=?"
+		args = append(args, tipo)
+	}
+	if codigo != "" {
+		query += " AND Codigo=?"
+		args = append(args, codigo)
+	}
+	if fechaIni != "" {
+		query += " AND Fecha>=?"
+		args = append(args, fechaIni)
+	}
+	if fechaFin != "" {
+		query += " AND Fecha<=?"
+		args = append(args, fechaFin)
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	io.WriteString(w, "TIENDA,TIPO,NUMERO,CODIGO,DESCRIPCION,CANTIDAD,FECHA\n")
+	count := 0
+	var tienda, tipoVal, numero, codigoVal, descrip string
+	var cantidad float64
+	var fecha time.Time
+
+	for rows.Next() {
+		if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
+			return count, err
+		}
+		descrip = strings.ReplaceAll(descrip, ",", " ")
+		line := fmt.Sprintf("%s,%s,%s,%s,%s,%.3f,%s\n",
+			tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006"))
+		io.WriteString(w, line)
+		count++
+		if count%50000 == 0 {
+			fmt.Printf("\r  CSV: %d filas...", count)
+		}
+	}
+	fmt.Printf("\r  CSV: %d filas exportadas.\n", count)
+	return count, rows.Err()
 }

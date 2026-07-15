@@ -314,7 +314,7 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 
 func menuCA() {
 	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS (ENERO A JULIO)")
+	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS")
 	fmt.Println(strings.Repeat("=", 60))
 
 	fmt.Println("\nConectando a SQL Server...")
@@ -341,8 +341,6 @@ func menuCA() {
 	anio := leerEntero("Ano (ej. 2026): ")
 	if anio < 2000 || anio > 2100 {
 		fmt.Println("  ERROR: Ano fuera de rango.")
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
 		return
 	}
 
@@ -364,7 +362,6 @@ func menuCA() {
 		}
 		fmt.Print("  Ingrese numeros separados por comas (ej: 1,3,5-7): ")
 		seleccion := leerLinea()
-
 		var indices []int
 		for _, parte := range strings.Split(seleccion, ",") {
 			parte = strings.TrimSpace(parte)
@@ -382,59 +379,103 @@ func menuCA() {
 				}
 			}
 		}
-		var seleccionadas []Sucursal
+		var sel []Sucursal
 		for _, idx := range indices {
 			if idx >= 1 && idx <= len(sucursales) {
-				seleccionadas = append(seleccionadas, sucursales[idx-1])
+				sel = append(sel, sucursales[idx-1])
 			}
 		}
-		sucursales = seleccionadas
+		sucursales = sel
 		fmt.Printf("\n  Seleccionadas: %d tiendas.\n", len(sucursales))
-	} else {
-		fmt.Printf("\n  Procesando todas: %d tiendas.\n", len(sucursales))
 	}
 
-	mesActual := int(time.Now().Month())
-	fmt.Printf("\n  Procesando CA (todo el ano %d, meses 1 a %d)...\n", anio, mesActual)
+	// --- FILTROS ---
+	fmt.Println("\n" + strings.Repeat("-", 40))
+	fmt.Println("  FILTROS DEL REPORTE:")
+	fmt.Println("  Tipo: [1] Solo FA  [2] Solo DV  [3] Todos")
+	tipoFiltro := ""
+	switch leerEntero("  > ") {
+	case 1: tipoFiltro = "FA"
+	case 2: tipoFiltro = "DV"
+	}
+
+	fmt.Print("  Codigo de producto (Enter = todos): ")
+	codigoFiltro := leerLinea()
+
+	fmt.Println("  Rango de fechas:")
+	fmt.Println("    [1] Mes completo (ej: 7 = Julio)")
+	fmt.Println("    [2] Rango de meses (ej: 1 a 7)")
+	fmt.Println("    [3] Fecha exacta (dd/mm)")
+	opFecha := leerEntero("  > ")
+
+	var fechaIni, fechaFin string
+	switch opFecha {
+	case 1:
+		mes := leerEntero("    Mes (1-12): ")
+		fechaIni = fmt.Sprintf("%d-%02d-01", anio, mes)
+		fechaFin = fmt.Sprintf("%d-%02d-31", anio, mes)
+	case 2:
+		mesIni := leerEntero("    Mes inicio (1-12): ")
+		mesFin := leerEntero("    Mes fin (1-12): ")
+		fechaIni = fmt.Sprintf("%d-%02d-01", anio, mesIni)
+		fechaFin = fmt.Sprintf("%d-%02d-31", anio, mesFin)
+	case 3:
+		fmt.Print("    Fecha (dd/mm/aaaa): ")
+		fechaStr := leerLinea()
+		partes := strings.Split(fechaStr, "/")
+		if len(partes) == 3 {
+			fechaIni = fmt.Sprintf("%s-%s-%s", partes[2], partes[1], partes[0])
+			fechaFin = fechaIni
+		}
+	}
+
+	// --- PROCESAR ---
+	fmt.Println("\n" + strings.Repeat("-", 40))
+	fmt.Println("  Procesando CA (insertando datos faltantes)...")
 	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
-	fmt.Println("\nGenerando Excel CA (por tienda)...")
-	f, ws, tituloMes, row := IniciarExcelCA(anio, mesActual)
-	totalRegs := 0
-	for _, s := range sucursales {
-		fmt.Printf("\r  [%s] leyendo SQL...", s.Codigo)
-		regs, err := LeerDatosCA_Tienda(db, s.Codigo, anio, mesActual)
-		if err != nil {
-			fmt.Printf("\n  %s: ERROR %v\n", s.Codigo, err)
-			continue
-		}
-		if len(regs) == 0 {
-			continue
-		}
-		fmt.Printf("\r  [%s] %d regs escribiendo...", s.Codigo, len(regs))
-		row = AppendTiendaCA(f, ws, regs, row)
-		totalRegs += len(regs)
-		regs = nil
+	// --- GENERAR CSV ---
+	fmt.Println("\nGenerando CSV...")
+	var filtroTipo string
+	switch tipoFiltro {
+	case "FA": filtroTipo = "FA"
+	case "DV": filtroTipo = "DV"
 	}
-	fmt.Println()
 
-	if totalRegs == 0 {
-		f.Close()
-		fmt.Println("  ADVERTENCIA: Sin datos CA en SQL.")
+	var tiendasCod []string
+	for _, s := range sucursales {
+		tiendasCod = append(tiendasCod, s.Codigo)
+	}
+
+	nombreArchivo := "Ventas_CA"
+	if filtroTipo != "" {
+		nombreArchivo += "_" + filtroTipo
+	}
+	if codigoFiltro != "" {
+		nombreArchivo += "_" + codigoFiltro
+	}
+	if opFecha == 1 || opFecha == 2 {
+		nombreArchivo += "_" + strings.ReplaceAll(fechaIni[:7], "-", "")
+	}
+	outputPath := fmt.Sprintf("%s\\%s.csv", outputDir, nombreArchivo)
+
+	f, err := os.Create(outputPath)
+	if err != nil {
+		fmt.Printf("  ERROR creando archivo: %v\n", err)
 		fmt.Print("\nPresione Enter para salir...")
 		leerLinea()
 		return
 	}
+	defer f.Close()
 
-	outputPath := fmt.Sprintf("%s\\Ventas_CA_%s_%d.xlsx", outputDir, tituloMes, anio)
-	if err := f.SaveAs(outputPath); err != nil {
-		fmt.Printf("  ERROR: %v\n", err)
+	count, err := GenerarCSV_CA(db, tiendasCod, filtroTipo, codigoFiltro, fechaIni, fechaFin, f)
+	if err != nil {
+		fmt.Printf("  ERROR CSV: %v\n", err)
 	} else {
-		fmt.Printf("  Archivo CA guardado: %s (%d registros)\n", outputPath, totalRegs)
+		fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
 	}
-	f.Close()
 
 	fmt.Print("\nPresione Enter para salir...")
 	leerLinea()
