@@ -329,9 +329,7 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		fmt.Printf("\r  SQL CA: %d/%d (%d%%)", end, len(registros), 100*end/len(registros))
 	}
-	fmt.Print("\r")
 	return nil
 }
 
