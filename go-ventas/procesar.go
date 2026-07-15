@@ -653,66 +653,57 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	CrearTablaPosVentasCA(db)
 
 	total := len(sucursales)
-	fmt.Printf("  %d tiendas a procesar (CA)\n", total)
 	tStart := time.Now()
 
-	tasks := make([]tareaTienda, total)
+	completadas := 0
+	finalErrores := 0
+
 	for i, s := range sucursales {
-		tasks[i] = tareaTienda{idx: i, suc: s}
+		var lastErr error
+		ok := false
+		for intento := 1; intento <= 3; intento++ {
+			if intento > 1 {
+				fmt.Printf(" (reintento %d...)", intento)
+			}
+			err := ProcesarTiendaCA(s, db, year, month, modo)
+			if err == nil || strings.Contains(err.Error(), "sin datos") {
+				ok = true
+				break
+			}
+			lastErr = err
+		}
+		if ok {
+			completadas++
+		} else {
+			fmt.Printf("\n  [%d/%d] %s - ERROR final: %v\n", i+1, total, s.Codigo, lastErr)
+			finalErrores++
+		}
+		fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d", completadas, total)))
 	}
 
-	pendientes := make([]tareaTienda, total)
-	copy(pendientes, tasks)
-
-	maxRetries := 3
-
-	for attempt := 0; attempt < maxRetries && len(pendientes) > 0; attempt++ {
-		if attempt > 0 {
-			fmt.Printf("\n  >>> REINTENTO CA %d: %d tiendas pendientes...\n", attempt, len(pendientes))
-		}
-
-		type caRes struct {
-			tt    tareaTienda
-			fallo bool
-		}
-
-		var nuevosPendientes []tareaTienda
-		var mu sync.Mutex
-		var wg sync.WaitGroup
-
-		for _, t := range pendientes {
-			wg.Add(1)
-			go func(tt tareaTienda) {
-				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						mu.Lock()
-						nuevosPendientes = append(nuevosPendientes, tt)
-						mu.Unlock()
-						fmt.Printf("\n  %s - PANIC CA: %v\n", tt.suc.Codigo, r)
-					}
-				}()
-
-				fmt.Printf("\n[%d/%d] %s - %s", tt.idx+1, total, tt.suc.Codigo, tt.suc.Nombre)
-				if err := ProcesarTiendaCA(tt.suc, db, year, month, modo); err != nil {
-					mu.Lock()
-					nuevosPendientes = append(nuevosPendientes, tt)
-					mu.Unlock()
-				}
-			}(t)
-		}
-
-		wg.Wait()
-		pendientes = nuevosPendientes
+	fmt.Println()
+	if finalErrores > 0 {
+		fmt.Printf("  *** ADVERTENCIA CA: %d tiendas sin procesar tras 3 intentos ***\n", finalErrores)
 	}
 
-	if len(pendientes) > 0 {
-		fmt.Printf("\n  *** ADVERTENCIA CA: %d tiendas sin procesar tras %d intentos ***\n", len(pendientes), maxRetries)
-		for _, t := range pendientes {
-			fmt.Printf("    - %s\n", t.suc.Codigo)
-		}
-	}
-
-	fmt.Printf("\n  CA listo. Tiempo: %.1f min.\n", time.Since(tStart).Minutes())
+	fmt.Printf("  CA listo. Tiempo: %.1f min.\n", time.Since(tStart).Minutes())
 	return nil
+}
+
+func barraProgreso(actual, total int, label string) string {
+	const ancho = 30
+	if total == 0 {
+		total = 1
+	}
+	filled := actual * ancho / total
+	bar := "["
+	for i := 0; i < ancho; i++ {
+		if i < filled {
+			bar += "+"
+		} else {
+			bar += "-"
+		}
+	}
+	bar += fmt.Sprintf("] %s", label)
+	return bar
 }

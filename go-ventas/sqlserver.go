@@ -317,6 +317,7 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 			if err != nil {
 				if strings.Contains(err.Error(), "PRIMARY") ||
 					strings.Contains(err.Error(), "clave duplicada") ||
+					strings.Contains(err.Error(), "duplicada") ||
 					strings.Contains(err.Error(), "duplicate") {
 					continue
 				}
@@ -328,9 +329,7 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		fmt.Printf("\r  SQL CA Progreso: %d/%d (%d%%)", end, len(registros), 100*end/len(registros))
 	}
-	fmt.Println()
 	return nil
 }
 
