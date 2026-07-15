@@ -329,7 +329,9 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 		if err := tx.Commit(); err != nil {
 			return err
 		}
+		fmt.Printf("\r  SQL CA: %d/%d (%d%%)", end, len(registros), 100*end/len(registros))
 	}
+	fmt.Print("\r")
 	return nil
 }
 
@@ -375,4 +377,13 @@ func LeerDatosDesdeSQL_CA(db *sql.DB, year, month int) ([]VentaCARegistro, error
 		registros = append(registros, r)
 	}
 	return registros, rows.Err()
+}
+
+func TiendaTieneDatosCA(db *sql.DB, codigo string, year int) bool {
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=?", codigo, year).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
 }
