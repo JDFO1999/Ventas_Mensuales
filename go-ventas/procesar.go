@@ -619,28 +619,22 @@ func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo strin
 		}
 
 		tStart := time.Now()
+		fmt.Printf("\r  [%s] leyendo...", filepath.Base(dbfPath))
 		regs, err := LeerArchivoCA(dbfPath, year, month, codigo, posNum)
 		tElapsed := time.Since(tStart)
 
 		if err != nil || len(regs) == 0 {
-			if len(regs) == 0 {
-				fmt.Printf("\n  [CA %s] sin datos (%.1fs)", filepath.Base(dbfPath), tElapsed.Seconds())
-			}
 			continue
 		}
 
+		fmt.Printf("\r  [%s] %d regs insertando...", filepath.Base(dbfPath), len(regs))
 		if err := InsertarVentasCA(db, regs); err != nil {
 			fmt.Printf("\n  [CA %s] ERROR insert: %v", filepath.Base(dbfPath), err)
 			continue
 		}
 		totalInsert += len(regs)
 
-		fileSize := 0.0
-		if info, err := os.Stat(dbfPath); err == nil {
-			fileSize = float64(info.Size()) / (1024 * 1024)
-		}
-		fmt.Printf("\n  [CA %s] %d regs, %.1f MB, %.1fs",
-			filepath.Base(dbfPath), len(regs), fileSize, tElapsed.Seconds())
+		fmt.Printf("\n  [%s] %d regs, %.1fs", filepath.Base(dbfPath), len(regs), tElapsed.Seconds())
 	}
 
 	if totalInsert == 0 {
@@ -659,6 +653,8 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	finalErrores := 0
 
 	for i, s := range sucursales {
+		fmt.Printf("\n  [%d/%d] %s...", i+1, total, s.Codigo)
+
 		var lastErr error
 		ok := false
 		for intento := 1; intento <= 3; intento++ {
