@@ -646,54 +646,139 @@ func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo strin
 func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string) error {
 	CrearTablaPosVentasCA(db)
 
-	total := len(sucursales)
-	tStart := time.Now()
-
-	completadas := 0
-	finalErrores := 0
-
-	for i, s := range sucursales {
-		cajasReales := 0
-		if dirs, err := ListarPOS(s.Codigo, s.RutaIP, s.RutaDBF, modo); err == nil {
-			cajasReales = len(dirs)
-		}
-		cajasSQL := ContarCajasSQL(db, s.Codigo, year)
-
-		if cajasSQL >= cajasReales && cajasReales > 0 {
-			completadas++
-			fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d  %s ok SQL", completadas, total, s.Codigo)))
-			continue
-		}
-
-		var lastErr error
-		ok := false
-		for intento := 1; intento <= 3; intento++ {
-			if intento > 1 {
-				fmt.Printf(" (reintento %d...)", intento)
-			}
-			err := ProcesarTiendaCA(s, db, year, month, modo, i+1, total)
-			if err == nil || strings.Contains(err.Error(), "sin datos") {
-				ok = true
-				break
-			}
-			lastErr = err
-		}
-		if ok {
-			completadas++
-		} else {
-			fmt.Printf("\n  [%d/%d] %s - ERROR final: %v\n", i+1, total, s.Codigo, lastErr)
-			finalErrores++
-		}
-		fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d", completadas, total)))
+	mesActual := int(time.Now().Month())
+	if month == 0 {
+		month = 1
+	}
+	mesHasta := month
+	if month <= 0 {
+		mesHasta = mesActual
+		month = 1
 	}
 
-	fmt.Println()
-	if finalErrores > 0 {
-		fmt.Printf("  *** ADVERTENCIA CA: %d tiendas sin procesar tras 3 intentos ***\n", finalErrores)
+	total := len(sucursales)
+	fmt.Printf("  %d tiendas, meses %d a %d\n", total, month, mesHasta)
+	tStart := time.Now()
+
+	for m := month; m <= mesHasta; m++ {
+		fmt.Printf("\n  --- %s ---\n", MesesES[m])
+
+		esMesActual := (m == mesActual && year == time.Now().Year())
+
+		completadas := 0
+		for i, s := range sucursales {
+			if !esMesActual {
+				if TiendaCompletaMes(db, s, year, m, modo) {
+					completadas++
+					fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d  %s ok", completadas, total, s.Codigo)))
+					continue
+				}
+			}
+
+			var lastErr error
+			ok := false
+			for intento := 1; intento <= 3; intento++ {
+				if intento > 1 {
+					fmt.Printf(" (reintento %d...)", intento)
+				}
+				err := ProcesarTiendaCA(s, db, year, m, modo, i+1, total)
+				if err == nil || strings.Contains(err.Error(), "sin datos") {
+					ok = true
+					break
+				}
+				lastErr = err
+			}
+			if ok {
+				completadas++
+			} else {
+				fmt.Printf("\n  [%d/%d] %s - ERROR: %v\n", i+1, total, s.Codigo, lastErr)
+			}
+			fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d", completadas, total)))
+		}
+		fmt.Println()
 	}
 
 	fmt.Printf("  CA listo. Tiempo: %.1f min.\n", time.Since(tStart).Minutes())
 	return nil
+}
+
+func ContarRegistrosDBF(dbfPath string, year, month int) (int, error) {
+	dbf, err := OpenDBF(dbfPath)
+	if err != nil {
+		return 0, err
+	}
+	defer dbf.Close()
+
+	diai := dbf.FieldIndex("DIA")
+	mesi := dbf.FieldIndex("MES")
+	anioi := dbf.FieldIndex("ANIO")
+	ai := dbf.FieldIndex("ANULADA")
+
+	count := 0
+	for i := 0; i < dbf.NumRecords; i++ {
+		rec, err := dbf.ReadRecord(i)
+		if err != nil || len(rec) == 0 {
+			continue
+		}
+		if rec[0] == 0x2A {
+			continue
+		}
+		if ai >= 0 && dbf.GetString(rec, dbf.Fields[ai]) == "T" {
+			continue
+		}
+		if diai < 0 || mesi < 0 || anioi < 0 {
+			continue
+		}
+		diaStr := dbf.GetString(rec, dbf.Fields[diai])
+		mesStr := dbf.GetString(rec, dbf.Fields[mesi])
+		anioStr := dbf.GetString(rec, dbf.Fields[anioi])
+		var dd, mm, yy int
+		fmt.Sscanf(diaStr, "%d", &dd)
+		fmt.Sscanf(mesStr, "%d", &mm)
+		fmt.Sscanf(anioStr, "%d", &yy)
+		if yy == year && mm == month {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func TiendaCompletaMes(db *sql.DB, suc Sucursal, year, month int, modo string) bool {
+	dirs, err := ListarPOS(suc.Codigo, suc.RutaIP, suc.RutaDBF, modo)
+	if err != nil || len(dirs) < 3 {
+		return false
+	}
+
+	muestras := []string{dirs[0], dirs[len(dirs)/2], dirs[len(dirs)-1]}
+	for _, dirName := range muestras {
+		posNum, err := strconv.Atoi(dirName[3:])
+		if err != nil {
+			return false
+		}
+
+		var posPath string
+		if modo == "S" {
+			if suc.RutaDBF != "" {
+				posPath = strings.TrimRight(suc.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", suc.Codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", suc.RutaIP, dirName)
+		}
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
+
+		countDBF, err := ContarRegistrosDBF(dbfPath, year, month)
+		if err != nil || countDBF == 0 {
+			continue
+		}
+
+		countSQL := ContarRegistrosSQL_POS(db, suc.Codigo, posNum, year, month)
+		if countSQL < countDBF {
+			return false
+		}
+	}
+	return true
 }
 
 func barraProgreso(actual, total int, label string) string {

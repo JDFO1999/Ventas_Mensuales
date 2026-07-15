@@ -379,9 +379,12 @@ func LeerDatosDesdeSQL_CA(db *sql.DB, year, month int) ([]VentaCARegistro, error
 	return registros, rows.Err()
 }
 
-func ContarCajasSQL(db *sql.DB, codigo string, year int) int {
+func ContarRegistrosSQL_POS(db *sql.DB, codigo string, caja, year, month int) int {
 	var count int
-	err := db.QueryRow("SELECT COUNT(DISTINCT Caja) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=?", codigo, year).Scan(&count)
+	err := db.QueryRow(
+		"SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND Caja=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+		codigo, caja, year, month,
+	).Scan(&count)
 	if err != nil {
 		return 0
 	}
