@@ -354,6 +354,46 @@ func menuCA() {
 		modo = "S"
 	}
 
+	fmt.Println("\nSeleccion de tiendas:")
+	fmt.Println("  [1] Todas las tiendas")
+	fmt.Println("  [2] Elegir manualmente")
+	if leerEntero("Seleccione (1/2): ") == 2 {
+		fmt.Printf("\n  Tiendas disponibles (%d):\n", len(sucursales))
+		for i, s := range sucursales {
+			fmt.Printf("    [%2d] %-6s - %s\n", i+1, s.Codigo, s.Nombre)
+		}
+		fmt.Print("  Ingrese numeros separados por comas (ej: 1,3,5-7): ")
+		seleccion := leerLinea()
+
+		var indices []int
+		for _, parte := range strings.Split(seleccion, ",") {
+			parte = strings.TrimSpace(parte)
+			if strings.Contains(parte, "-") {
+				var ini, fin int
+				fmt.Sscanf(parte, "%d-%d", &ini, &fin)
+				for j := ini; j <= fin; j++ {
+					indices = append(indices, j)
+				}
+			} else {
+				var n int
+				fmt.Sscanf(parte, "%d", &n)
+				if n > 0 && n <= len(sucursales) {
+					indices = append(indices, n)
+				}
+			}
+		}
+		var seleccionadas []Sucursal
+		for _, idx := range indices {
+			if idx >= 1 && idx <= len(sucursales) {
+				seleccionadas = append(seleccionadas, sucursales[idx-1])
+			}
+		}
+		sucursales = seleccionadas
+		fmt.Printf("\n  Seleccionadas: %d tiendas.\n", len(sucursales))
+	} else {
+		fmt.Printf("\n  Procesando todas: %d tiendas.\n", len(sucursales))
+	}
+
 	mesActual := int(time.Now().Month())
 	fmt.Printf("\n  Procesando CA (todo el ano %d, meses 1 a %d)...\n", anio, mesActual)
 	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {

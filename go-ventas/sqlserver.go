@@ -379,11 +379,32 @@ func LeerDatosDesdeSQL_CA(db *sql.DB, year, month int) ([]VentaCARegistro, error
 	return registros, rows.Err()
 }
 
-func TiendaTieneDatosCA(db *sql.DB, codigo string, year int) bool {
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=?", codigo, year).Scan(&count)
+func TiendaPosCompletosCA(db *sql.DB, codigo string, year int) bool {
+	rows, err := db.Query("SELECT DISTINCT Caja FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=? ORDER BY Caja", codigo, year)
 	if err != nil {
 		return false
 	}
-	return count > 0
+	defer rows.Close()
+
+	var cajas []int
+	for rows.Next() {
+		var c int
+		if err := rows.Scan(&c); err != nil {
+			return false
+		}
+		cajas = append(cajas, c)
+	}
+	if len(cajas) < 3 {
+		return false
+	}
+
+	muestras := []int{cajas[0], cajas[len(cajas)/2], cajas[len(cajas)-1]}
+	for _, c := range muestras {
+		var count int
+		err := db.QueryRow("SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=? AND Caja=?", codigo, year, c).Scan(&count)
+		if err != nil || count == 0 {
+			return false
+		}
+	}
+	return true
 }

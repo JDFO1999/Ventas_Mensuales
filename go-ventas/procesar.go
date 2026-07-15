@@ -653,7 +653,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	finalErrores := 0
 
 	for i, s := range sucursales {
-		if TiendaTieneDatosCA(db, s.Codigo, year) {
+		if TiendaPosCompletosCA(db, s.Codigo, year) {
 			completadas++
 			fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d  %s ya en SQL", completadas, total, s.Codigo)))
 			continue
