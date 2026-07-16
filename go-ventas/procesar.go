@@ -644,6 +644,12 @@ func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo strin
 }
 
 func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string) error {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("\n  *** PANIC en ProcesarCA: %v ***\n", r)
+		}
+	}()
+
 	CrearTablaPosVentasCA(db)
 
 	mesActual := int(time.Now().Month())

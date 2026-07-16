@@ -31,6 +31,7 @@ func leerLinea() string {
 
 func main() {
 	autoPtr := flag.Bool("auto", false, "Modo automatico sin menu")
+	autoCaPtr := flag.Bool("auto-ca", false, "Modo automatico CA")
 	configPtr := flag.Bool("config", false, "Abrir menu de configuracion")
 	modePtr := flag.String("mode", "", "Modo: S o IP")
 	monthPtr := flag.Int("month", 0, "Mes (1-12)")
@@ -65,6 +66,29 @@ func main() {
 		return
 	}
 
+	if *autoCaPtr {
+		month := *monthPtr
+		year := *yearPtr
+		mode := *modePtr
+
+		if month == 0 || year == 0 {
+			now := time.Now()
+			month = int(now.Month())
+			year = now.Year()
+		}
+		if mode == "" {
+			cfg, err := CargarConfig("config.json")
+			if err != nil {
+				fmt.Println("ERROR: Sin config. Ejecute --config primero.")
+				return
+			}
+			mode = cfg.Modo
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoCA(year, month, cfg, true)
+		return
+	}
+
 	menuPrincipal()
 }
 
@@ -96,6 +120,7 @@ func menuPrincipal() {
 		fmt.Println("  [2] Configurar automatizacion")
 		fmt.Println("  [3] Ejecutar modo automatico")
 		fmt.Println("  [4] Generar reporte CA (detalle)")
+		fmt.Println("  [5] Ejecutar CA modo automatico")
 		fmt.Println("  [0] Salir")
 		fmt.Println()
 
@@ -109,6 +134,8 @@ func menuPrincipal() {
 			ejecutarAutomaticoManual()
 		case 4:
 			menuCA()
+		case 5:
+			ejecutarAutomaticoCAManual()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
@@ -130,6 +157,44 @@ func ejecutarAutomaticoManual() {
 	fmt.Printf("  Modo lectura: %s | Output: %s\n\n", cfg.Modo, cfg.OutputDir)
 
 	procesarAutomatico(anio, mes, cfg, true, false)
+}
+
+func ejecutarAutomaticoCAManual() {
+	now := time.Now()
+	mes := int(now.Month())
+	anio := now.Year()
+
+	fmt.Printf("\n  Modo automatico CA: %s %d\n", MesesES[mes], anio)
+
+	cfg, err := CargarConfig("config.json")
+	if err != nil {
+		cfg = Config{Modo: "S", OutputDir: outputDir}
+	}
+	fmt.Printf("  Modo lectura: %s | Output: %s\n\n", cfg.Modo, cfg.OutputDir)
+
+	fmt.Println("\nConectando a SQL Server...")
+	db, err := ConectarSQL()
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+	defer db.Close()
+
+	fmt.Println("\nObteniendo lista de sucursales...")
+	sucursales, err := ObtenerSucursales(db)
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
+
+	procesarAutomaticoCA(anio, 0, Config{Modo: cfg.Modo, OutputDir: cfg.OutputDir}, false)
+	fmt.Print("\nPresione Enter para salir...")
+	leerLinea()
 }
 
 func menuNormal() {
@@ -411,24 +476,26 @@ func menuCA() {
 	fmt.Println("    [3] Fecha exacta (dd/mm)")
 	opFecha := leerEntero("  > ")
 
-	var fechaIni, fechaFin string
+	var mesIniExcel, mesFinExcel int
 	switch opFecha {
 	case 1:
 		mes := leerEntero("    Mes (1-12): ")
-		fechaIni = fmt.Sprintf("%d-%02d-01", anio, mes)
-		fechaFin = fmt.Sprintf("%d-%02d-31", anio, mes)
+		mesIniExcel = mes
+		mesFinExcel = mes
 	case 2:
-		mesIni := leerEntero("    Mes inicio (1-12): ")
-		mesFin := leerEntero("    Mes fin (1-12): ")
-		fechaIni = fmt.Sprintf("%d-%02d-01", anio, mesIni)
-		fechaFin = fmt.Sprintf("%d-%02d-31", anio, mesFin)
+		mesIniExcel = leerEntero("    Mes inicio (1-12): ")
+		mesFinExcel = leerEntero("    Mes fin (1-12): ")
 	case 3:
 		fmt.Print("    Fecha (dd/mm/aaaa): ")
 		fechaStr := leerLinea()
 		partes := strings.Split(fechaStr, "/")
 		if len(partes) == 3 {
-			fechaIni = fmt.Sprintf("%s-%s-%s", partes[2], partes[1], partes[0])
-			fechaFin = fechaIni
+			var dd, mm, yy int
+			fmt.Sscanf(partes[0], "%d", &dd)
+			fmt.Sscanf(partes[1], "%d", &mm)
+			fmt.Sscanf(partes[2], "%d", &yy)
+			mesIniExcel = mm
+			mesFinExcel = mm
 		}
 	}
 
@@ -440,34 +507,41 @@ func menuCA() {
 	}
 
 	// --- GENERAR EXCEL ---
-	fmt.Println("\nGenerando Excel...")
-	var filtroTipo string
-	switch tipoFiltro {
-	case "FA": filtroTipo = "FA"
-	case "DV": filtroTipo = "DV"
+	fmt.Print("\n¿Generar Excel? [S/N]: ")
+	if strings.ToUpper(leerLinea()) == "S" {
+		var filtroTipo string
+		switch tipoFiltro {
+		case "FA": filtroTipo = "FA"
+		case "DV": filtroTipo = "DV"
+		}
+
+		var tiendasCod []string
+		for _, s := range sucursales {
+			tiendasCod = append(tiendasCod, s.Codigo)
+		}
+
+		nombreArchivo := "Ventas_CA"
+		if filtroTipo != "" {
+			nombreArchivo += "_" + filtroTipo
+		}
+		if codigoFiltro != "" {
+			nombreArchivo += "_" + codigoFiltro
+		}
+		outputPath := fmt.Sprintf("%s\\%s_%d.xlsx", outputDir, nombreArchivo, anio)
+
+		if mesIniExcel == 0 {
+			mesIniExcel = 1
+			mesFinExcel = int(time.Now().Month())
+		}
+		fmt.Println()
+		count, err := GenerarExcelCA_Stream(db, tiendasCod, filtroTipo, codigoFiltro, mesIniExcel, mesFinExcel, anio, outputPath)
+		if err != nil {
+			fmt.Printf("  ERROR Excel: %v\n", err)
+		} else {
+			fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
+		}
 	}
 
-	var tiendasCod []string
-	for _, s := range sucursales {
-		tiendasCod = append(tiendasCod, s.Codigo)
-	}
-
-	nombreArchivo := "Ventas_CA"
-	if filtroTipo != "" {
-		nombreArchivo += "_" + filtroTipo
-	}
-	if codigoFiltro != "" {
-		nombreArchivo += "_" + codigoFiltro
-	}
-	if opFecha == 1 || opFecha == 2 {
-		nombreArchivo += "_" + strings.ReplaceAll(fechaIni[:7], "-", "")
-	}
-	outputPath := fmt.Sprintf("%s\\%s.xlsx", outputDir, nombreArchivo)
-
-	count, err := GenerarExcelCA_Stream(db, tiendasCod, filtroTipo, codigoFiltro, fechaIni, fechaFin, outputPath)
-	if err != nil {
-		fmt.Printf("  ERROR Excel: %v\n", err)
-	} else {
-		fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
-	}
+	fmt.Print("\nPresione Enter para salir...")
+	leerLinea()
 }

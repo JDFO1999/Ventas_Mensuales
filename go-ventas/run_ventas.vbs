@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").Run "cmd /c ""C:\Users\Alkosto\Desktop\excel - automatico\go-ventas\run_ventas.cmd""", 0, False

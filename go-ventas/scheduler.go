@@ -288,3 +288,32 @@ func estadoTarea() string {
 	}
 	return result
 }
+
+func procesarAutomaticoCA(year, month int, cfg Config, headless bool) {
+	if !headless {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("\n  *** PANIC CA: %v ***\n", r)
+			}
+		}()
+	}
+
+	db, err := ConectarSQL()
+	if err != nil {
+		fmt.Printf("ERROR SQL: %v\n", err)
+		return
+	}
+	defer db.Close()
+
+	fmt.Printf("[%s] CA Iniciando: %d\n", time.Now().Format("15:04:05"), year)
+
+	sucursales, err := ObtenerSucursales(db)
+	if err != nil {
+		fmt.Printf("ERROR: %v\n", err)
+		return
+	}
+
+	ProcesarCA(db, sucursales, year, month, cfg.Modo)
+
+	fmt.Printf("[%s] CA Completado.\n", time.Now().Format("15:04:05"))
+}

@@ -439,106 +439,112 @@ func LeerDatosCA_Tienda(db *sql.DB, codigo string, year, mesHasta int) ([]VentaC
 	return registros, rows.Err()
 }
 
-func GenerarExcelCA_Stream(db *sql.DB, tiendas []string, tipo, codigo string, fechaIni, fechaFin string, outputPath string) (int, error) {
-	query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
-		FROM Pos_Ventas_CA
-		WHERE 1=1`
-	var args []interface{}
-
-	if len(tiendas) > 0 {
-		placeholders := make([]string, len(tiendas))
-		for i, t := range tiendas {
-			placeholders[i] = "?"
-			args = append(args, t)
-		}
-		query += " AND Tienda IN (" + strings.Join(placeholders, ",") + ")"
-	}
-	if tipo != "" {
-		query += " AND Tipo=?"
-		args = append(args, tipo)
-	}
-	if codigo != "" {
-		query += " AND Codigo=?"
-		args = append(args, codigo)
-	}
-	if fechaIni != "" {
-		query += " AND Fecha>=?"
-		args = append(args, fechaIni)
-	}
-	if fechaFin != "" {
-		query += " AND Fecha<=?"
-		args = append(args, fechaFin)
-	}
-
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-
+func GenerarExcelCA_Stream(db *sql.DB, tiendas []string, tipo, codigo string, mesIni, mesFin, year int, outputPath string) (int, error) {
 	f := excelize.NewFile()
 	defer f.Close()
 
-	ws := "CA"
-	index, _ := f.NewSheet(ws)
-	f.SetActiveSheet(index)
 	f.DeleteSheet("Sheet1")
 
-	sw, err := f.NewStreamWriter(ws)
-	if err != nil {
-		return 0, err
-	}
+	totalCount := 0
 
-	headers := []interface{}{"TIENDA", "TIPO", "NUMERO", "CODIGO", "DESCRIPCION", "CANTIDAD", "FECHA"}
-	if err := sw.SetRow("A1", headers); err != nil {
-		return 0, err
-	}
+	for m := mesIni; m <= mesFin; m++ {
+		ws := MesesES[m] + " " + fmt.Sprintf("%d", year)
+		f.NewSheet(ws)
 
-	headerStyle, _ := f.NewStyle(&excelize.Style{
-		Fill: excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
-		Font: &excelize.Font{Bold: true, Size: 11, Color: "FFFFFF"},
-	})
-	f.SetCellStyle(ws, "A1", "G1", headerStyle)
-
-	count := 0
-	rowNum := 2
-	var tienda, tipoVal, numero, codigoVal, descrip string
-	var cantidad float64
-	var fecha time.Time
-
-	for rows.Next() {
-		if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
-			sw.Flush()
-			return count, err
+		sw, err := f.NewStreamWriter(ws)
+		if err != nil {
+			return totalCount, err
 		}
-		descrip = strings.ReplaceAll(descrip, ";", " ")
-		cell, _ := excelize.CoordinatesToCellName(1, rowNum)
-		row := []interface{}{tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006")}
-		if err := sw.SetRow(cell, row); err != nil {
-			sw.Flush()
-			return count, err
+
+		headers := []interface{}{"TIENDA", "TIPO", "NUMERO", "CODIGO", "DESCRIPCION", "CANTIDAD", "FECHA"}
+		if err := sw.SetRow("A1", headers); err != nil {
+			return totalCount, err
 		}
-		count++
-		rowNum++
-		if count%50000 == 0 {
-			fmt.Printf("\r  Excel: %d filas...", count)
+
+		headerStyle, _ := f.NewStyle(&excelize.Style{
+			Fill: excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
+			Font: &excelize.Font{Bold: true, Size: 11, Color: "FFFFFF"},
+		})
+		f.SetCellStyle(ws, "A1", "G1", headerStyle)
+
+		query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
+			FROM Pos_Ventas_CA
+			WHERE YEAR(Fecha)=? AND MONTH(Fecha)=?`
+		var args []interface{}
+		args = append(args, year, m)
+
+		if len(tiendas) > 0 {
+			placeholders := make([]string, len(tiendas))
+			for i, t := range tiendas {
+				placeholders[i] = "?"
+				args = append(args, t)
+			}
+			query += " AND Tienda IN (" + strings.Join(placeholders, ",") + ")"
 		}
+		if tipo != "" {
+			query += " AND Tipo=?"
+			args = append(args, tipo)
+		}
+		if codigo != "" {
+			query += " AND Codigo=?"
+			args = append(args, codigo)
+		}
+
+		rows, err := db.Query(query, args...)
+		if err != nil {
+			return totalCount, err
+		}
+
+		count := 0
+		rowNum := 2
+		var tienda, tipoVal, numero, codigoVal, descrip string
+		var cantidad float64
+		var fecha time.Time
+
+		for rows.Next() {
+			if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
+				rows.Close()
+				sw.Flush()
+				return totalCount, err
+			}
+			descrip = strings.ReplaceAll(descrip, ";", " ")
+			cell, _ := excelize.CoordinatesToCellName(1, rowNum)
+			row := []interface{}{tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006")}
+			if err := sw.SetRow(cell, row); err != nil {
+				rows.Close()
+				sw.Flush()
+				return totalCount, err
+			}
+			count++
+			rowNum++
+		}
+		rows.Close()
+
+		if err := sw.Flush(); err != nil {
+			return totalCount, err
+		}
+
+		for c := 1; c <= 7; c++ {
+			col, _ := excelize.ColumnNumberToName(c)
+			f.SetColWidth(ws, col, col, 18)
+		}
+		f.SetColWidth(ws, "E", "E", 50)
+
+		totalCount += count
+		fmt.Printf("\r  %s: %d filas\n", ws, count)
 	}
 
-	if err := sw.Flush(); err != nil {
-		return count, err
+	if totalCount == 0 {
+		return 0, fmt.Errorf("sin datos")
 	}
 
-	for c := 1; c <= 7; c++ {
-		col, _ := excelize.ColumnNumberToName(c)
-		f.SetColWidth(ws, col, col, 18)
-	}
-	f.SetColWidth(ws, "E", "E", 50)
+	idx, _ := f.GetSheetIndex(MesesES[mesIni] + " " + fmt.Sprintf("%d", year))
+	f.SetActiveSheet(idx)
 
 	if err := f.SaveAs(outputPath); err != nil {
-		return count, err
+		return totalCount, err
 	}
 
-	fmt.Printf("\r  Excel: %d filas exportadas.\n", count)
-	return count, rows.Err()
+	fmt.Printf("\n  Excel: %d filas totales.\n", totalCount)
+	return totalCount, nil
 }
