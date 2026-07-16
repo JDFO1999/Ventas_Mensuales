@@ -384,11 +384,11 @@ func LeerDatosDesdeSQL_CA(db *sql.DB, year, month int) ([]VentaCARegistro, error
 	return registros, rows.Err()
 }
 
-func ContarRegistrosSQL_POS(db *sql.DB, codigo string, caja, year, month int) int {
+func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 	var count int
 	err := db.QueryRow(
-		"SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND Caja=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
-		codigo, caja, year, month,
+		"SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+		codigo, year, month,
 	).Scan(&count)
 	if err != nil {
 		return 0

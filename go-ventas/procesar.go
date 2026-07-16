@@ -745,17 +745,16 @@ func ContarRegistrosDBF(dbfPath string, year, month int) (int, error) {
 
 func TiendaCompletaMes(db *sql.DB, suc Sucursal, year, month int, modo string) bool {
 	dirs, err := ListarPOS(suc.Codigo, suc.RutaIP, suc.RutaDBF, modo)
-	if err != nil || len(dirs) < 3 {
+	if err != nil || len(dirs) == 0 {
 		return false
 	}
 
-	muestras := []string{dirs[0], dirs[len(dirs)/2], dirs[len(dirs)-1]}
-	for _, dirName := range muestras {
+	totalDBF := 0
+	for _, dirName := range dirs {
 		posNum, err := strconv.Atoi(dirName[3:])
 		if err != nil {
-			return false
+			continue
 		}
-
 		var posPath string
 		if modo == "S" {
 			if suc.RutaDBF != "" {
@@ -767,18 +766,19 @@ func TiendaCompletaMes(db *sql.DB, suc Sucursal, year, month int, modo string) b
 			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", suc.RutaIP, dirName)
 		}
 		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
-
-		countDBF, err := ContarRegistrosDBF(dbfPath, year, month)
-		if err != nil || countDBF == 0 {
+		count, err := ContarRegistrosDBF(dbfPath, year, month)
+		if err != nil {
 			continue
 		}
-
-		countSQL := ContarRegistrosSQL_POS(db, suc.Codigo, posNum, year, month)
-		if countSQL < countDBF {
-			return false
-		}
+		totalDBF += count
 	}
-	return true
+
+	if totalDBF == 0 {
+		return false
+	}
+
+	totalSQL := ContarTiendaMes_SQL(db, suc.Codigo, year, month)
+	return totalSQL >= totalDBF
 }
 
 func barraProgreso(actual, total int, label string) string {
