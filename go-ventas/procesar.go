@@ -619,7 +619,12 @@ func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo strin
 		}
 
 		tStart := time.Now()
-		fmt.Printf("\r  [%d/%d] %s  [%s] leyendo...", idx, total, codigo, filepath.Base(dbfPath))
+		if info, err := os.Stat(dbfPath); err == nil {
+			sizeMB := float64(info.Size()) / (1024 * 1024)
+			fmt.Printf("\r  [%d/%d] %s  [%s] %.1f MB leyendo...", idx, total, codigo, filepath.Base(dbfPath), sizeMB)
+		} else {
+			fmt.Printf("\r  [%d/%d] %s  [%s] leyendo...", idx, total, codigo, filepath.Base(dbfPath))
+		}
 		regs, err := LeerArchivoCA(dbfPath, year, month, codigo, posNum)
 		tElapsed := time.Since(tStart)
 
@@ -663,37 +668,82 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	logInfo("CA: Iniciando %d tiendas, meses %d a %d, modo=%s", total, month, mesHasta, modo)
 	tStart := time.Now()
 
+	// --- Meses cerrados en paralelo ---
+	var mesesCerrados []int
+	var mesActualIndice int
 	for m := month; m <= mesHasta; m++ {
-		esMesActual := (m == mesActual && year == time.Now().Year())
-
-		if !esMesActual {
-			logInfo("CA: %s - verificando %d tiendas", MesesES[m], total)
-			completadas := 0
-			pendientes := 0
-			for _, s := range sucursales {
-				if TiendaCompletaMes(db, s, year, m, modo) {
-					completadas++
-				} else {
-					pendientes++
-				}
-			}
-			if pendientes == 0 {
-				fmt.Printf("\r  %s: todas OK\n", MesesES[m])
-				logInfo("CA: %s - %d/%d OK (saltado)", MesesES[m], completadas, total)
-				continue
-			}
+		if m == mesActual && year == time.Now().Year() {
+			mesActualIndice = m
 		} else {
-			logInfo("CA: %s - mes actual, procesando completo", MesesES[m])
+			mesesCerrados = append(mesesCerrados, m)
 		}
+	}
+
+	if len(mesesCerrados) > 0 {
+		var wg sync.WaitGroup
+		for _, m := range mesesCerrados {
+			wg.Add(1)
+			go func(mes int) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						logError("CA: PANIC en %s: %v", MesesES[mes], r)
+					}
+				}()
+
+				logInfo("CA: %s - verificando %d tiendas", MesesES[mes], total)
+				skipCount := 0
+				pendingStores := make([]Sucursal, 0)
+				for _, s := range sucursales {
+					if TiendaCompletaMes(db, s, year, mes, modo) {
+						skipCount++
+					} else {
+						pendingStores = append(pendingStores, s)
+					}
+				}
+				if len(pendingStores) == 0 {
+					logInfo("CA: %s - %d/%d OK (saltado)", MesesES[mes], skipCount, total)
+					return
+				}
+
+				completadas := skipCount
+				errores := 0
+				for i, s := range pendingStores {
+					var lastErr error
+					ok := false
+					for intento := 1; intento <= 3; intento++ {
+						err := ProcesarTiendaCA(s, db, year, mes, modo, -1, -1)
+						if err == nil || strings.Contains(err.Error(), "sin datos") {
+							ok = true
+							break
+						}
+						lastErr = err
+					}
+					if ok {
+						completadas++
+						logInfo("CA: %s %s OK", s.Codigo, MesesES[mes])
+					} else {
+						_ = i
+						fmt.Printf("\n  %s %s - ERROR: %v\n", MesesES[mes], s.Codigo, lastErr)
+						logError("CA: %s %s FALLO: %v", s.Codigo, MesesES[mes], lastErr)
+						errores++
+					}
+				}
+				logInfo("CA: %s completado: %d OK, %d errores", MesesES[mes], completadas, errores)
+			}(m)
+		}
+		wg.Wait()
+		fmt.Printf("\r  Meses cerrados: completados\n")
+	}
+
+	// --- Mes actual secuencial ---
+	if mesActualIndice > 0 {
+		m := mesActualIndice
+		logInfo("CA: %s - mes actual, procesando completo", MesesES[m])
 
 		erroresMes := 0
 		completadas := 0
 		for i, s := range sucursales {
-			if !esMesActual && TiendaCompletaMes(db, s, year, m, modo) {
-				completadas++
-				continue
-			}
-
 			var lastErr error
 			ok := false
 			for intento := 1; intento <= 3; intento++ {

@@ -443,31 +443,57 @@ func menuCA() {
 		fmt.Print("\nPresione Enter para salir...")
 		leerLinea()
 	}()
+
+	db, sucursales, anio, modo := conectarYSucursales("REPORTE CA - DETALLE DE PRODUCTOS")
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	sucursales = seleccionarTiendasCA(sucursales)
+
+	tipoFiltro, codigoFiltro, mesIniExcel, mesFinExcel := pedirFiltrosCA()
+
+	fmt.Println("\n" + strings.Repeat("-", 40))
+	fmt.Println("  Procesando CA (insertando datos faltantes)...")
+	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+	}
+
+	fmt.Print("\n¿Generar Excel? [S/N]: ")
+	if strings.ToUpper(leerLinea()) == "S" {
+		generarExcelCA(db, sucursales, tipoFiltro, codigoFiltro, mesIniExcel, mesFinExcel, anio)
+	}
+
+	fmt.Print("\nPresione Enter para salir...")
+	leerLinea()
+}
+
+func conectarYSucursales(titulo string) (*sql.DB, []Sucursal, int, string) {
 	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println("  REPORTE CA - DETALLE DE PRODUCTOS")
+	fmt.Println("  " + titulo)
 	fmt.Println(strings.Repeat("=", 60))
 
 	fmt.Println("\nConectando a SQL Server...")
 	db, err := ConectarSQL()
 	if err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
-		return
+		return nil, nil, 0, ""
 	}
-	defer db.Close()
 	fmt.Println("  Conexion exitosa.")
 
 	fmt.Println("\nObteniendo lista de sucursales...")
 	sucursales, err := ObtenerSucursales(db)
 	if err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
-		return
+		return nil, nil, 0, ""
 	}
 	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
 
 	anio := leerEntero("Ano (ej. 2026): ")
 	if anio < 2000 || anio > 2100 {
 		fmt.Println("  ERROR: Ano fuera de rango.")
-		return
+		return nil, nil, 0, ""
 	}
 
 	fmt.Println("\nModo de lectura:")
@@ -477,7 +503,10 @@ func menuCA() {
 	if leerEntero("Seleccione: ") == 1 {
 		modo = "S"
 	}
+	return db, sucursales, anio, modo
+}
 
+func seleccionarTiendasCA(sucursales []Sucursal) []Sucursal {
 	fmt.Println("\nSeleccion de tiendas:")
 	fmt.Println("  [1] Todas las tiendas")
 	fmt.Println("  [2] Elegir manualmente")
@@ -511,11 +540,13 @@ func menuCA() {
 				sel = append(sel, sucursales[idx-1])
 			}
 		}
-		sucursales = sel
-		fmt.Printf("\n  Seleccionadas: %d tiendas.\n", len(sucursales))
+		fmt.Printf("\n  Seleccionadas: %d tiendas.\n", len(sel))
+		return sel
 	}
+	return sucursales
+}
 
-	// --- FILTROS ---
+func pedirFiltrosCA() (string, string, int, int) {
 	fmt.Println("\n" + strings.Repeat("-", 40))
 	fmt.Println("  FILTROS DEL REPORTE:")
 	fmt.Println("  Tipo: [1] Solo FA  [2] Solo DV  [3] Todos")
@@ -556,52 +587,41 @@ func menuCA() {
 			mesFinExcel = mm
 		}
 	}
+	return tipoFiltro, codigoFiltro, mesIniExcel, mesFinExcel
+}
 
-	// --- PROCESAR ---
-	fmt.Println("\n" + strings.Repeat("-", 40))
-	fmt.Println("  Procesando CA (insertando datos faltantes)...")
-	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {
-		fmt.Printf("  ERROR: %v\n", err)
+func generarExcelCA(db *sql.DB, sucursales []Sucursal, tipoFiltro, codigoFiltro string, mesIniExcel, mesFinExcel, anio int) {
+	var filtroTipo string
+	switch tipoFiltro {
+	case "FA": filtroTipo = "FA"
+	case "DV": filtroTipo = "DV"
 	}
 
-	// --- GENERAR EXCEL ---
-	fmt.Print("\n¿Generar Excel? [S/N]: ")
-	if strings.ToUpper(leerLinea()) == "S" {
-		var filtroTipo string
-		switch tipoFiltro {
-		case "FA": filtroTipo = "FA"
-		case "DV": filtroTipo = "DV"
-		}
-
-		var tiendasCod []string
-		for _, s := range sucursales {
-			tiendasCod = append(tiendasCod, s.Codigo)
-		}
-
-		nombreArchivo := "Ventas_CA"
-		if filtroTipo != "" {
-			nombreArchivo += "_" + filtroTipo
-		}
-		if codigoFiltro != "" {
-			nombreArchivo += "_" + codigoFiltro
-		}
-		outputPath := fmt.Sprintf("%s\\%s_%d.xlsx", outputDir, nombreArchivo, anio)
-
-		if mesIniExcel == 0 {
-			mesIniExcel = 1
-			mesFinExcel = int(time.Now().Month())
-		}
-		fmt.Println()
-		count, err := GenerarExcelCA_Stream(db, tiendasCod, filtroTipo, codigoFiltro, mesIniExcel, mesFinExcel, anio, outputPath)
-		if err != nil {
-			fmt.Printf("  ERROR Excel: %v\n", err)
-		} else {
-			fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
-		}
+	var tiendasCod []string
+	for _, s := range sucursales {
+		tiendasCod = append(tiendasCod, s.Codigo)
 	}
 
-	fmt.Print("\nPresione Enter para salir...")
-	leerLinea()
+	nombreArchivo := "Ventas_CA"
+	if filtroTipo != "" {
+		nombreArchivo += "_" + filtroTipo
+	}
+	if codigoFiltro != "" {
+		nombreArchivo += "_" + codigoFiltro
+	}
+	outputPath := fmt.Sprintf("%s\\%s_%d.xlsx", outputDir, nombreArchivo, anio)
+
+	if mesIniExcel == 0 {
+		mesIniExcel = 1
+		mesFinExcel = int(time.Now().Month())
+	}
+	fmt.Println()
+	count, err := GenerarExcelCA_Stream(db, tiendasCod, filtroTipo, codigoFiltro, mesIniExcel, mesFinExcel, anio, outputPath)
+	if err != nil {
+		fmt.Printf("  ERROR Excel: %v\n", err)
+	} else {
+		fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
+	}
 }
 
 func verLogErrores() {
