@@ -321,6 +321,11 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 					strings.Contains(err.Error(), "clave duplicada") ||
 					strings.Contains(err.Error(), "duplicada") ||
 					strings.Contains(err.Error(), "duplicate") {
+					tx.Rollback()
+					tx, err = db.Begin()
+					if err != nil {
+						return err
+					}
 					continue
 				}
 				tx.Rollback()
