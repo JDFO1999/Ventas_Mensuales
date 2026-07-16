@@ -646,7 +646,7 @@ func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo strin
 func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string) error {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("\n  *** PANIC en ProcesarCA: %v ***\n", r)
+			logError("PANIC en ProcesarCA: %v", r)
 		}
 	}()
 
@@ -660,22 +660,38 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	}
 
 	total := len(sucursales)
-	fmt.Printf("  %d tiendas, meses %d a %d\n", total, month, mesHasta)
+	logInfo("CA: Iniciando %d tiendas, meses %d a %d, modo=%s", total, month, mesHasta, modo)
 	tStart := time.Now()
 
 	for m := month; m <= mesHasta; m++ {
-		fmt.Printf("\n  --- %s ---\n", MesesES[m])
-
 		esMesActual := (m == mesActual && year == time.Now().Year())
 
-		completadas := 0
-		for i, s := range sucursales {
-			if !esMesActual {
+		if !esMesActual {
+			logInfo("CA: %s - verificando %d tiendas", MesesES[m], total)
+			completadas := 0
+			pendientes := 0
+			for _, s := range sucursales {
 				if TiendaCompletaMes(db, s, year, m, modo) {
 					completadas++
-					fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d  %s ok", completadas, total, s.Codigo)))
-					continue
+				} else {
+					pendientes++
 				}
+			}
+			if pendientes == 0 {
+				fmt.Printf("\r  %s: todas OK\n", MesesES[m])
+				logInfo("CA: %s - %d/%d OK (saltado)", MesesES[m], completadas, total)
+				continue
+			}
+		} else {
+			logInfo("CA: %s - mes actual, procesando completo", MesesES[m])
+		}
+
+		erroresMes := 0
+		completadas := 0
+		for i, s := range sucursales {
+			if !esMesActual && TiendaCompletaMes(db, s, year, m, modo) {
+				completadas++
+				continue
 			}
 
 			var lastErr error
@@ -693,15 +709,22 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 			}
 			if ok {
 				completadas++
+				logInfo("CA: %s %s OK", s.Codigo, MesesES[m])
 			} else {
 				fmt.Printf("\n  [%d/%d] %s - ERROR: %v\n", i+1, total, s.Codigo, lastErr)
+				logError("CA: %s %s FALLO: %v", s.Codigo, MesesES[m], lastErr)
+				erroresMes++
 			}
 			fmt.Printf("\r  %s", barraProgreso(completadas, total, fmt.Sprintf("%d/%d", completadas, total)))
 		}
 		fmt.Println()
+		if erroresMes > 0 {
+			logError("CA: %s - %d errores", MesesES[m], erroresMes)
+		}
 	}
 
 	fmt.Printf("  CA listo. Tiempo: %.1f min.\n", time.Since(tStart).Minutes())
+	logInfo("CA: Completado en %.1f min", time.Since(tStart).Minutes())
 	return nil
 }
 

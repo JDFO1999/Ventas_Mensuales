@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -12,6 +14,42 @@ import (
 )
 
 const outputDir = `C:\Users\Alkosto\Desktop\excel - automatico`
+
+var (
+	logFile *os.File
+	logger  *log.Logger
+)
+
+func initLog() {
+	var err error
+	logFilePath := outputDir + "\\go-ventas\\ventas.log"
+	logFile, err = os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logFile = nil
+		return
+	}
+	logger = log.New(io.MultiWriter(os.Stdout, logFile), "", 0)
+}
+
+func logInfo(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	line := fmt.Sprintf("[%s] INFO  %s", time.Now().Format("2006-01-02 15:04:05"), msg)
+	if logger != nil {
+		logger.Println(line)
+	} else {
+		fmt.Println(msg)
+	}
+}
+
+func logError(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	line := fmt.Sprintf("[%s] ERROR %s", time.Now().Format("2006-01-02 15:04:05"), msg)
+	if logger != nil {
+		logger.Println(line)
+	} else {
+		fmt.Println(msg)
+	}
+}
 
 func leerEntero(prompt string) int {
 	fmt.Print(prompt)
@@ -30,6 +68,13 @@ func leerLinea() string {
 }
 
 func main() {
+	initLog()
+	defer func() {
+		if logFile != nil {
+			logFile.Close()
+		}
+	}()
+
 	autoPtr := flag.Bool("auto", false, "Modo automatico sin menu")
 	autoCaPtr := flag.Bool("auto-ca", false, "Modo automatico CA")
 	configPtr := flag.Bool("config", false, "Abrir menu de configuracion")
@@ -114,13 +159,22 @@ func menuPrincipal() {
 		fmt.Println("+------------------------------------------------------------+")
 		fmt.Println()
 
-		fmt.Printf("  TAREA PROGRAMADA: %s\n", estadoTarea())
+		fmt.Printf("  TAREA PROGRAMADA FA: %s\n", estadoTarea())
+		fmt.Printf("  TAREA PROGRAMADA CA: %s\n", estadoTareaCA())
 		fmt.Println()
-		fmt.Println("  [1] Generar reporte manual")
-		fmt.Println("  [2] Configurar automatizacion")
-		fmt.Println("  [3] Ejecutar modo automatico")
-		fmt.Println("  [4] Generar reporte CA (detalle)")
-		fmt.Println("  [5] Ejecutar CA modo automatico")
+		fmt.Println("  ┌──── FACTURAS (FA) ──────────────────────┐")
+		fmt.Println("  │  [1] Reporte manual FA                   │")
+		fmt.Println("  │  [2] Configurar automatizacion FA        │")
+		fmt.Println("  │  [3] Ejecutar FA modo automatico         │")
+		fmt.Println("  └──────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── DETALLE PRODUCTOS (CA) ──────────────┐")
+		fmt.Println("  │  [4] Reporte manual CA                   │")
+		fmt.Println("  │  [5] Ejecutar CA modo automatico         │")
+		fmt.Println("  │  [6] Configurar automatizacion CA        │")
+		fmt.Println("  └──────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  [7] Ver log de errores")
 		fmt.Println("  [0] Salir")
 		fmt.Println()
 
@@ -136,6 +190,10 @@ func menuPrincipal() {
 			menuCA()
 		case 5:
 			ejecutarAutomaticoCAManual()
+		case 6:
+			MenuConfigCA()
+		case 7:
+			verLogErrores()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
@@ -540,6 +598,45 @@ func menuCA() {
 		} else {
 			fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
 		}
+	}
+
+	fmt.Print("\nPresione Enter para salir...")
+	leerLinea()
+}
+
+func verLogErrores() {
+	logPath := outputDir + "\\go-ventas\\ventas.log"
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		fmt.Println("\n  No hay archivo de log todavia.")
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+		return
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var errores []string
+	for _, l := range lines {
+		if strings.Contains(l, "ERROR") || strings.Contains(l, "WARN") {
+			errores = append(errores, l)
+		}
+	}
+
+	fmt.Println("\n" + strings.Repeat("=", 70))
+	fmt.Println("  ULTIMOS ERRORES / ADVERTENCIAS")
+	fmt.Println(strings.Repeat("=", 70))
+
+	if len(errores) == 0 {
+		fmt.Println("  (sin errores)")
+	} else {
+		start := 0
+		if len(errores) > 30 {
+			start = len(errores) - 30
+		}
+		for _, e := range errores[start:] {
+			fmt.Printf("  %s\n", e)
+		}
+		fmt.Printf("\n  Mostrando %d de %d lineas.\n", len(errores)-start, len(errores))
 	}
 
 	fmt.Print("\nPresione Enter para salir...")
