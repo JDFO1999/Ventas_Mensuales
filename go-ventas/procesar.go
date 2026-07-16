@@ -647,13 +647,10 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	CrearTablaPosVentasCA(db)
 
 	mesActual := int(time.Now().Month())
-	if month == 0 {
-		month = 1
-	}
 	mesHasta := month
 	if month <= 0 {
-		mesHasta = mesActual
 		month = 1
+		mesHasta = mesActual
 	}
 
 	total := len(sucursales)
@@ -702,83 +699,9 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	return nil
 }
 
-func ContarRegistrosDBF(dbfPath string, year, month int) (int, error) {
-	dbf, err := OpenDBF(dbfPath)
-	if err != nil {
-		return 0, err
-	}
-	defer dbf.Close()
-
-	diai := dbf.FieldIndex("DIA")
-	mesi := dbf.FieldIndex("MES")
-	anioi := dbf.FieldIndex("ANIO")
-	ai := dbf.FieldIndex("ANULADA")
-
-	count := 0
-	for i := 0; i < dbf.NumRecords; i++ {
-		rec, err := dbf.ReadRecord(i)
-		if err != nil || len(rec) == 0 {
-			continue
-		}
-		if rec[0] == 0x2A {
-			continue
-		}
-		if ai >= 0 && dbf.GetString(rec, dbf.Fields[ai]) == "T" {
-			continue
-		}
-		if diai < 0 || mesi < 0 || anioi < 0 {
-			continue
-		}
-		diaStr := dbf.GetString(rec, dbf.Fields[diai])
-		mesStr := dbf.GetString(rec, dbf.Fields[mesi])
-		anioStr := dbf.GetString(rec, dbf.Fields[anioi])
-		var dd, mm, yy int
-		fmt.Sscanf(diaStr, "%d", &dd)
-		fmt.Sscanf(mesStr, "%d", &mm)
-		fmt.Sscanf(anioStr, "%d", &yy)
-		if yy == year && mm == month {
-			count++
-		}
-	}
-	return count, nil
-}
-
 func TiendaCompletaMes(db *sql.DB, suc Sucursal, year, month int, modo string) bool {
-	dirs, err := ListarPOS(suc.Codigo, suc.RutaIP, suc.RutaDBF, modo)
-	if err != nil || len(dirs) == 0 {
-		return false
-	}
-
-	totalDBF := 0
-	for _, dirName := range dirs {
-		posNum, err := strconv.Atoi(dirName[3:])
-		if err != nil {
-			continue
-		}
-		var posPath string
-		if modo == "S" {
-			if suc.RutaDBF != "" {
-				posPath = strings.TrimRight(suc.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
-			} else {
-				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", suc.Codigo, dirName)
-			}
-		} else {
-			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", suc.RutaIP, dirName)
-		}
-		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
-		count, err := ContarRegistrosDBF(dbfPath, year, month)
-		if err != nil {
-			continue
-		}
-		totalDBF += count
-	}
-
-	if totalDBF == 0 {
-		return false
-	}
-
 	totalSQL := ContarTiendaMes_SQL(db, suc.Codigo, year, month)
-	return totalSQL >= totalDBF
+	return totalSQL > 0
 }
 
 func barraProgreso(actual, total int, label string) string {
