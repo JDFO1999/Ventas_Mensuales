@@ -17,6 +17,10 @@ const (
 	SQLDatabase = "Sistemas"
 	SQLUser     = "Sa"
 	SQLPassword = "Alkosto123"
+
+	SQLServerCA   = "10.10.10.40"
+	SQLUserCA     = "usuario_app"
+	SQLPasswordCA = "JoseJose*69*"
 )
 
 func ConectarSQL() (*sql.DB, error) {
@@ -28,6 +32,27 @@ func ConectarSQL() (*sql.DB, error) {
 	}
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(5)
+	return db, nil
+}
+
+func ConectarSQL_CA(codigo string) (*sql.DB, error) {
+	dbName := "CA_" + codigo
+
+	masterStr := fmt.Sprintf("server=%s;database=master;user id=%s;password=%s;encrypt=disable;connection timeout=10",
+		SQLServerCA, SQLUserCA, SQLPasswordCA)
+	masterDB, err := sql.Open("mssql", masterStr)
+	if err == nil {
+		masterDB.Exec(fmt.Sprintf("IF DB_ID('%s') IS NULL CREATE DATABASE [%s]", dbName, dbName))
+		masterDB.Close()
+	}
+
+	connStr := fmt.Sprintf("server=%s;database=%s;user id=%s;password=%s;encrypt=disable;connection timeout=10",
+		SQLServerCA, dbName, SQLUserCA, SQLPasswordCA)
+	db, err := sql.Open("mssql", connStr)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(2)
 	return db, nil
 }
 
@@ -359,50 +384,6 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 	return nil
 }
 
-func LeerDatosDesdeSQL_CA(db *sql.DB, year, month int) ([]VentaCARegistro, error) {
-	rows, err := db.Query(`
-		SELECT Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip,
-			CodVen, Modelo, Serial, Cantidad, NCntd, NPvpDol, NPvp2Dol, NPvp3Dol, NPvpCop,
-			Precio, NPrecio, IGV, NoDscto, CodCli, Anulada, Depto, Familia,
-			Costo, NCosDol, Pvpt, Oferta, Devlto, Margen, PvpVen, LPesado, NroCie, FechaCie
-		FROM Pos_Ventas_CA
-		WHERE YEAR(Fecha)=? AND MONTH(Fecha)=?
-		ORDER BY Tienda, Fecha, Caja, Numero
-	`, year, month)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var registros []VentaCARegistro
-	for rows.Next() {
-		var r VentaCARegistro
-		var fechaCie sql.NullTime
-		var codBar, modelo, serial, codCli, anulada, pvpt, nroCie sql.NullString
-		if err := rows.Scan(&r.Fecha, &r.Hora, &r.Tienda, &r.Caja, &r.Tipo, &r.STipo, &r.Numero,
-			&r.Codigo, &codBar, &r.Descrip, &r.CodVen, &modelo, &serial,
-			&r.Cantidad, &r.NCntd, &r.NPvpDol, &r.NPvp2Dol, &r.NPvp3Dol, &r.NPvpCop,
-			&r.Precio, &r.NPrecio, &r.IGV, &r.NoDscto, &codCli, &anulada, &r.Depto, &r.Familia,
-			&r.Costo, &r.NCosDol, &pvpt, &r.Oferta, &r.Devlto, &r.Margen, &r.PvpVen,
-			&r.LPesado, &nroCie, &fechaCie); err != nil {
-			return nil, err
-		}
-		r.CodBar = codBar.String
-		r.Modelo = modelo.String
-		r.Serial = serial.String
-		r.CodCli = codCli.String
-		r.Anulada = anulada.String
-		r.Pvpt = pvpt.String
-		r.NroCie = nroCie.String
-		if fechaCie.Valid {
-			t := fechaCie.Time
-			r.FechaCie = &t
-		}
-		registros = append(registros, r)
-	}
-	return registros, rows.Err()
-}
-
 func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 	var count int
 	err := db.QueryRow(
@@ -415,50 +396,7 @@ func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 	return count
 }
 
-func LeerDatosCA_Tienda(db *sql.DB, codigo string, year, mesHasta int) ([]VentaCARegistro, error) {
-	rows, err := db.Query(`
-		SELECT Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip,
-			CodVen, Modelo, Serial, Cantidad, NCntd, NPvpDol, NPvp2Dol, NPvp3Dol, NPvpCop,
-			Precio, NPrecio, IGV, NoDscto, CodCli, Anulada, Depto, Familia,
-			Costo, NCosDol, Pvpt, Oferta, Devlto, Margen, PvpVen, LPesado, NroCie, FechaCie
-		FROM Pos_Ventas_CA
-		WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha) BETWEEN 1 AND ?
-	`, codigo, year, mesHasta)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var registros []VentaCARegistro
-	for rows.Next() {
-		var r VentaCARegistro
-		var fechaCie sql.NullTime
-		var codBar, modelo, serial, codCli, anulada, pvpt, nroCie sql.NullString
-		if err := rows.Scan(&r.Fecha, &r.Hora, &r.Tienda, &r.Caja, &r.Tipo, &r.STipo, &r.Numero,
-			&r.Codigo, &codBar, &r.Descrip, &r.CodVen, &modelo, &serial,
-			&r.Cantidad, &r.NCntd, &r.NPvpDol, &r.NPvp2Dol, &r.NPvp3Dol, &r.NPvpCop,
-			&r.Precio, &r.NPrecio, &r.IGV, &r.NoDscto, &codCli, &anulada, &r.Depto, &r.Familia,
-			&r.Costo, &r.NCosDol, &pvpt, &r.Oferta, &r.Devlto, &r.Margen, &r.PvpVen,
-			&r.LPesado, &nroCie, &fechaCie); err != nil {
-			return nil, err
-		}
-		r.CodBar = codBar.String
-		r.Modelo = modelo.String
-		r.Serial = serial.String
-		r.CodCli = codCli.String
-		r.Anulada = anulada.String
-		r.Pvpt = pvpt.String
-		r.NroCie = nroCie.String
-		if fechaCie.Valid {
-			t := fechaCie.Time
-			r.FechaCie = &t
-		}
-		registros = append(registros, r)
-	}
-	return registros, rows.Err()
-}
-
-func GenerarExcelCA_Stream(db *sql.DB, tiendas []string, tipo, codigo string, mesIni, mesFin, year int, outputPath string) (int, error) {
+func GenerarExcelCA_Stream(tiendas []string, tipo, codigo string, mesIni, mesFin, year int, outputPath string) (int, error) {
 	f := excelize.NewFile()
 	defer f.Close()
 
@@ -486,58 +424,55 @@ func GenerarExcelCA_Stream(db *sql.DB, tiendas []string, tipo, codigo string, me
 		})
 		f.SetCellStyle(ws, "A1", "G1", headerStyle)
 
-		query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
-			FROM Pos_Ventas_CA
-			WHERE YEAR(Fecha)=? AND MONTH(Fecha)=?`
-		var args []interface{}
-		args = append(args, year, m)
-
-		if len(tiendas) > 0 {
-			placeholders := make([]string, len(tiendas))
-			for i, t := range tiendas {
-				placeholders[i] = "?"
-				args = append(args, t)
-			}
-			query += " AND Tienda IN (" + strings.Join(placeholders, ",") + ")"
-		}
-		if tipo != "" {
-			query += " AND Tipo=?"
-			args = append(args, tipo)
-		}
-		if codigo != "" {
-			query += " AND Codigo=?"
-			args = append(args, codigo)
-		}
-
-		rows, err := db.Query(query, args...)
-		if err != nil {
-			return totalCount, err
-		}
-
-		count := 0
 		rowNum := 2
-		var tienda, tipoVal, numero, codigoVal, descrip string
-		var cantidad float64
-		var fecha time.Time
+		monthCount := 0
 
-		for rows.Next() {
-			if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
-				rows.Close()
-				sw.Flush()
-				return totalCount, err
+		for _, codigo := range tiendas {
+			dbCA, err := ConectarSQL_CA(codigo)
+			if err != nil {
+				continue
 			}
-			descrip = strings.ReplaceAll(descrip, ";", " ")
-			cell, _ := excelize.CoordinatesToCellName(1, rowNum)
-			row := []interface{}{tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006")}
-			if err := sw.SetRow(cell, row); err != nil {
-				rows.Close()
-				sw.Flush()
-				return totalCount, err
+
+			query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
+				FROM Pos_Ventas_CA
+				WHERE YEAR(Fecha)=? AND MONTH(Fecha)=?`
+			var args []interface{}
+			args = append(args, year, m)
+			args = append(args, codigo)
+			query += " AND Tienda=?"
+			if tipo != "" {
+				query += " AND Tipo=?"
+				args = append(args, tipo)
 			}
-			count++
-			rowNum++
+			if codigo != "" {
+				query += " AND Codigo=?"
+				args = append(args, codigo)
+			}
+
+			rows, err := dbCA.Query(query, args...)
+			if err != nil {
+				dbCA.Close()
+				continue
+			}
+
+			var tienda, tipoVal, numero, codigoVal, descrip string
+			var cantidad float64
+			var fecha time.Time
+
+			for rows.Next() {
+				if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
+					continue
+				}
+				descrip = strings.ReplaceAll(descrip, ";", " ")
+				cell, _ := excelize.CoordinatesToCellName(1, rowNum)
+				row := []interface{}{tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006")}
+				sw.SetRow(cell, row)
+				monthCount++
+				rowNum++
+			}
+			rows.Close()
+			dbCA.Close()
 		}
-		rows.Close()
 
 		if err := sw.Flush(); err != nil {
 			return totalCount, err
@@ -549,8 +484,8 @@ func GenerarExcelCA_Stream(db *sql.DB, tiendas []string, tipo, codigo string, me
 		}
 		f.SetColWidth(ws, "E", "E", 50)
 
-		totalCount += count
-		fmt.Printf("\r  %s: %d filas\n", ws, count)
+		totalCount += monthCount
+		fmt.Printf("\r  %s: %d filas\n", ws, monthCount)
 	}
 
 	if totalCount == 0 {

@@ -577,8 +577,16 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 	return registros, nil
 }
 
-func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo string, idx, total int) error {
+func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int) error {
 	codigo := sucursal.Codigo
+
+	dbCA, err := ConectarSQL_CA(codigo)
+	if err != nil {
+		return fmt.Errorf("FALLO BD CA: %v", err)
+	}
+	defer dbCA.Close()
+
+	CrearTablaPosVentasCA(dbCA)
 
 	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
 	if err != nil {
@@ -633,7 +641,7 @@ func ProcesarTiendaCA(sucursal Sucursal, db *sql.DB, year, month int, modo strin
 		}
 
 		fmt.Printf("\r  [%d/%d] %s  [%s] %d regs insertando...", idx, total, codigo, filepath.Base(dbfPath), len(regs))
-		if err := InsertarVentasCA(db, regs); err != nil {
+		if err := InsertarVentasCA(dbCA, regs); err != nil {
 			fmt.Printf("\n  [%d/%d] %s  [%s] ERROR insert: %v", idx, total, codigo, filepath.Base(dbfPath), err)
 			continue
 		}
@@ -654,9 +662,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 			logError("PANIC en ProcesarCA: %v", r)
 		}
 	}()
-
-	CrearTablaPosVentasCA(db)
-
+	_ = db // solo para consultar Sucursal
 	mesActual := int(time.Now().Month())
 	mesHasta := month
 	if month <= 0 {
@@ -695,7 +701,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 				skipCount := 0
 				pendingStores := make([]Sucursal, 0)
 				for _, s := range sucursales {
-					if TiendaCompletaMes(db, s, year, mes, modo) {
+					if TiendaCompletaMes(s, year, mes, modo) {
 						skipCount++
 					} else {
 						pendingStores = append(pendingStores, s)
@@ -712,7 +718,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 					var lastErr error
 					ok := false
 					for intento := 1; intento <= 3; intento++ {
-						err := ProcesarTiendaCA(s, db, year, mes, modo, -1, -1)
+						err := ProcesarTiendaCA(s, year, mes, modo, -1, -1)
 						if err == nil || strings.Contains(err.Error(), "sin datos") {
 							ok = true
 							break
@@ -750,7 +756,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 				if intento > 1 {
 					fmt.Printf(" (reintento %d...)", intento)
 				}
-				err := ProcesarTiendaCA(s, db, year, m, modo, i+1, total)
+				err := ProcesarTiendaCA(s, year, m, modo, i+1, total)
 				if err == nil || strings.Contains(err.Error(), "sin datos") {
 					ok = true
 					break
@@ -778,8 +784,14 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	return nil
 }
 
-func TiendaCompletaMes(db *sql.DB, suc Sucursal, year, month int, modo string) bool {
-	totalSQL := ContarTiendaMes_SQL(db, suc.Codigo, year, month)
+func TiendaCompletaMes(suc Sucursal, year, month int, modo string) bool {
+	dbCA, err := ConectarSQL_CA(suc.Codigo)
+	if err != nil {
+		return false
+	}
+	defer dbCA.Close()
+
+	totalSQL := ContarTiendaMes_SQL(dbCA, suc.Codigo, year, month)
 	return totalSQL > 0
 }
 

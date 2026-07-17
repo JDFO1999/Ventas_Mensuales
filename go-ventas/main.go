@@ -627,7 +627,7 @@ func generarExcelCA(db *sql.DB, sucursales []Sucursal, tipoFiltro, codigoFiltro 
 		mesFinExcel = int(time.Now().Month())
 	}
 	fmt.Println()
-	count, err := GenerarExcelCA_Stream(db, tiendasCod, filtroTipo, codigoFiltro, mesIniExcel, mesFinExcel, anio, outputPath)
+	count, err := GenerarExcelCA_Stream(tiendasCod, filtroTipo, codigoFiltro, mesIniExcel, mesFinExcel, anio, outputPath)
 	if err != nil {
 		fmt.Printf("  ERROR Excel: %v\n", err)
 	} else {
