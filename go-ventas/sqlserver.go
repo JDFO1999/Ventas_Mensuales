@@ -39,7 +39,7 @@ func ObtenerSucursales(db *sql.DB) ([]Sucursal, error) {
 		ORDER BY cCodigo
 	`)
 	if err != nil {
-		fmt.Println("  SQL: tabla Sucursal no accesible, cargando respaldo local...")
+		fmt.Println("  Usando respaldo local de sucursales (SQL no disponible)")
 		s, errJSON := CargarSucursalesJSON()
 		if errJSON != nil {
 			return nil, fmt.Errorf("sin SQL ni respaldo: %v / %v", err, errJSON)
@@ -72,7 +72,14 @@ func ObtenerSucursales(db *sql.DB) ([]Sucursal, error) {
 }
 
 func GuardarSucursalesJSON(sucursales []Sucursal) {
-	data, err := json.MarshalIndent(sucursales, "", "  ")
+	respaldo := struct {
+		UltimaSincronizacion string     `json:"ultima_sincronizacion"`
+		Tiendas              []Sucursal `json:"tiendas"`
+	}{
+		UltimaSincronizacion: time.Now().Format("2006-01-02 15:04:05"),
+		Tiendas:              sucursales,
+	}
+	data, err := json.MarshalIndent(respaldo, "", "  ")
 	if err != nil {
 		return
 	}
@@ -84,6 +91,18 @@ func CargarSucursalesJSON() ([]Sucursal, error) {
 	if err != nil {
 		return nil, err
 	}
+	var respaldo struct {
+		UltimaSincronizacion string     `json:"ultima_sincronizacion"`
+		Tiendas              []Sucursal `json:"tiendas"`
+	}
+	if err := json.Unmarshal(data, &respaldo); err != nil {
+		return nil, err
+	}
+	if len(respaldo.Tiendas) > 0 {
+		fmt.Printf("  Respaldo del %s (%d tiendas)\n", respaldo.UltimaSincronizacion, len(respaldo.Tiendas))
+		return respaldo.Tiendas, nil
+	}
+	// fallback: old format without wrapper
 	var s []Sucursal
 	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, err

@@ -1,0 +1,7 @@
+{
+  "modo": "IP",
+  "output_dir": "C:\\Users\\Alkosto\\Desktop\\excel - automatico",
+  "hora_inicio": 8,
+  "hora_fin": 12,
+  "intervalo_minutos": 1440
+}

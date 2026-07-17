@@ -193,6 +193,7 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 	defer db.Close()
 
 	fmt.Printf("[%s] Iniciando: %s %d\n", time.Now().Format("15:04:05"), MesesES[month], year)
+	logHistorial(fmt.Sprintf("FA: Iniciado %s %d", MesesES[month], year))
 
 	sucursales, err := ObtenerSucursales(db)
 	if err != nil {
@@ -262,6 +263,7 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 
 	fmt.Printf("[%s] Completado en %.1f min.\n",
 		time.Now().Format("15:04:05"), time.Since(tStart).Minutes())
+	logHistorial(fmt.Sprintf("FA: Completado en %.1f min", time.Since(tStart).Minutes()))
 }
 
 func estadoTarea() string {
@@ -298,24 +300,29 @@ func procesarAutomaticoCA(year, month int, cfg Config, headless bool) {
 		}()
 	}
 
+	tStart := time.Now()
+
 	db, err := ConectarSQL()
 	if err != nil {
 		fmt.Printf("ERROR SQL: %v\n", err)
+		logHistorial(fmt.Sprintf("CA: ERROR conexion SQL"))
 		return
 	}
 	defer db.Close()
 
-	fmt.Printf("[%s] CA Iniciando: %d\n", time.Now().Format("15:04:05"), year)
+	logHistorial(fmt.Sprintf("CA: Iniciado %d", year))
 
 	sucursales, err := ObtenerSucursales(db)
 	if err != nil {
 		fmt.Printf("ERROR: %v\n", err)
+		logHistorial(fmt.Sprintf("CA: ERROR sucursales"))
 		return
 	}
 
 	ProcesarCA(db, sucursales, year, month, cfg.Modo)
 
 	fmt.Printf("[%s] CA Completado.\n", time.Now().Format("15:04:05"))
+	logHistorial(fmt.Sprintf("CA: Completado en %.1f min", time.Since(tStart).Minutes()))
 }
 
 func estadoTareaCA() string {
@@ -359,39 +366,31 @@ func MenuConfigCA() {
 	for {
 		fmt.Println()
 		fmt.Println(strings.Repeat("=", 60))
-		fmt.Println("  CONFIGURACION AUTOMATIZACION CA")
+		fmt.Println("  CONFIGURACION AUTOMATIZACION CA (DIARIA)")
 		fmt.Println(strings.Repeat("=", 60))
 		fmt.Println()
-		fmt.Printf("  [1] Hora de inicio:    %02d:00\n", cfg.HoraInicio)
-		fmt.Printf("  [2] Hora de fin:       %02d:00\n", cfg.HoraFin)
-		fmt.Printf("  [3] Modo de lectura:   %s\n", cfg.Modo)
+		fmt.Printf("  [1] Hora de ejecucion: %02d:00\n", cfg.HoraInicio)
+		fmt.Printf("  [2] Modo de lectura:   %s\n", cfg.Modo)
 		fmt.Println()
-		fmt.Println("  [4] GUARDAR y crear tarea programada CA")
+		fmt.Println("  [3] GUARDAR y crear tarea programada CA")
 		fmt.Println("  [0] Salir sin guardar")
 		fmt.Println()
 
 		op := leerEntero("  Seleccione: ")
 		switch op {
 		case 1:
-			h := leerEntero("  Hora de inicio (0-23): ")
+			h := leerEntero("  Hora (0-23): ")
 			if h >= 0 && h <= 23 {
 				cfg.HoraInicio = h
 			}
 		case 2:
-			h := leerEntero("  Hora de fin (0-23): ")
-			if h >= 0 && h <= 23 && h > cfg.HoraInicio {
-				cfg.HoraFin = h
-			} else {
-				fmt.Println("  ERROR: Debe ser mayor que la hora de inicio.")
-			}
-		case 3:
 			fmt.Println("  Modo: [1] Servidor S:  [2] Tiendas IP")
 			if leerEntero("  > ") == 1 {
 				cfg.Modo = "S"
 			} else {
 				cfg.Modo = "IP"
 			}
-		case 4:
+		case 3:
 			if err := GuardarConfig(cfg, "config_ca.json"); err != nil {
 				fmt.Printf("  ERROR: %v\n", err)
 				continue
@@ -421,24 +420,8 @@ echo [%%date%% %%time%%] CA Completado.
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
 
 	psPath := exeDir + "\\setup_scheduler_ca.ps1"
-	duration := cfg.HoraFin - cfg.HoraInicio
-
-	var psTrigger string
-	if duration <= 0 {
-		psTrigger = fmt.Sprintf(`$trigger = New-ScheduledTaskTrigger -Daily -At "%02d:00"`, cfg.HoraInicio)
-	} else {
-		psTrigger = fmt.Sprintf(
-			`$trigger = New-ScheduledTaskTrigger -Once -At "%02d:00" -RepetitionInterval (New-TimeSpan -Minutes %d) -RepetitionDuration (New-TimeSpan -Hours %d)`,
-			cfg.HoraInicio, cfg.IntervaloMinutos, duration)
-	}
-
-	var psMessage string
-	if duration <= 0 {
-		psMessage = fmt.Sprintf(`Write-Host "Tarea CA creada: $taskName (diaria %02d:00)"`, cfg.HoraInicio)
-	} else {
-		psMessage = fmt.Sprintf(`Write-Host "Tarea CA creada: $taskName (%02d:00 a %02d:00)"`,
-			cfg.HoraInicio, cfg.HoraFin)
-	}
+	psTrigger := fmt.Sprintf(`$trigger = New-ScheduledTaskTrigger -Daily -At "%02d:00"`, cfg.HoraInicio)
+	psMessage := fmt.Sprintf(`Write-Host "Tarea CA creada: $taskName (diaria %02d:00)"`, cfg.HoraInicio)
 
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensualesCA"

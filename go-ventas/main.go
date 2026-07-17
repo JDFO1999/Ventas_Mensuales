@@ -51,6 +51,17 @@ func logError(format string, args ...interface{}) {
 	}
 }
 
+func logHistorial(msg string) {
+	histPath := outputDir + "\\go-ventas\\ventas_historial.log"
+	f, err := os.OpenFile(histPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	line := fmt.Sprintf("[%s] %s\n", time.Now().Format("2006-01-02 15:04"), msg)
+	f.WriteString(line)
+}
+
 func leerEntero(prompt string) int {
 	fmt.Print(prompt)
 	reader := bufio.NewReader(os.Stdin)
@@ -174,8 +185,8 @@ func menuPrincipal() {
 		fmt.Println("  │  [6] Configurar automatizacion CA        │")
 		fmt.Println("  └──────────────────────────────────────────┘")
 		fmt.Println()
-		fmt.Println("  [7] Ver log de errores")
-		fmt.Println("  [0] Salir")
+	fmt.Println("  [7] Ver historial de ejecuciones")
+	fmt.Println("  [0] Salir")
 		fmt.Println()
 
 		op := leerEntero("  Seleccione: ")
@@ -193,7 +204,7 @@ func menuPrincipal() {
 		case 6:
 			MenuConfigCA()
 		case 7:
-			verLogErrores()
+			verHistorial()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
@@ -624,39 +635,61 @@ func generarExcelCA(db *sql.DB, sucursales []Sucursal, tipoFiltro, codigoFiltro 
 	}
 }
 
-func verLogErrores() {
-	logPath := outputDir + "\\go-ventas\\ventas.log"
-	data, err := os.ReadFile(logPath)
+func verHistorial() {
+	histPath := outputDir + "\\go-ventas\\ventas_historial.log"
+	data, err := os.ReadFile(histPath)
 	if err != nil {
-		fmt.Println("\n  No hay archivo de log todavia.")
+		fmt.Println("\n  No hay historial todavia.")
 		fmt.Print("\nPresione Enter para salir...")
 		leerLinea()
 		return
 	}
 
 	lines := strings.Split(string(data), "\n")
-	var errores []string
+	var validas []string
 	for _, l := range lines {
-		if strings.Contains(l, "ERROR") || strings.Contains(l, "WARN") {
-			errores = append(errores, l)
+		l = strings.TrimSpace(l)
+		if l != "" {
+			validas = append(validas, l)
 		}
 	}
 
 	fmt.Println("\n" + strings.Repeat("=", 70))
-	fmt.Println("  ULTIMOS ERRORES / ADVERTENCIAS")
+	fmt.Println("  HISTORIAL DE EJECUCIONES")
 	fmt.Println(strings.Repeat("=", 70))
 
-	if len(errores) == 0 {
-		fmt.Println("  (sin errores)")
+	if len(validas) == 0 {
+		fmt.Println("  (sin registros)")
 	} else {
 		start := 0
-		if len(errores) > 30 {
-			start = len(errores) - 30
+		if len(validas) > 30 {
+			start = len(validas) - 30
 		}
-		for _, e := range errores[start:] {
-			fmt.Printf("  %s\n", e)
+		for _, l := range validas[start:] {
+			fmt.Printf("  %s\n", l)
 		}
-		fmt.Printf("\n  Mostrando %d de %d lineas.\n", len(errores)-start, len(errores))
+		fmt.Printf("\n  Mostrando %d de %d registros.\n", len(validas)-start, len(validas))
+	}
+
+	logPath := outputDir + "\\go-ventas\\ventas.log"
+	if errData, _ := os.ReadFile(logPath); len(errData) > 0 {
+		errLines := strings.Split(string(errData), "\n")
+		var errores []string
+		for _, l := range errLines {
+			if strings.Contains(l, "ERROR") || strings.Contains(l, "WARN") {
+				errores = append(errores, l)
+			}
+		}
+		if len(errores) > 0 {
+			fmt.Println("\n  --- ULTIMOS ERRORES ---")
+			start := 0
+			if len(errores) > 10 {
+				start = len(errores) - 10
+			}
+			for _, e := range errores[start:] {
+				fmt.Printf("  %s\n", e)
+			}
+		}
 	}
 
 	fmt.Print("\nPresione Enter para salir...")
