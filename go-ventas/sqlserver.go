@@ -265,6 +265,8 @@ func LeerDatosDesdeSQL(db *sql.DB, year, month int) (map[string]map[int]VentaPor
 
 func CrearTablaPosVentasCA(db *sql.DB, codigo string) error {
 	tableName := "POS_CA_" + codigo
+	pkName := "PK_" + tableName
+	db.Exec(fmt.Sprintf("IF OBJECT_ID('%s','PK') IS NOT NULL ALTER TABLE %s DROP CONSTRAINT %s", pkName, tableName, pkName))
 	_, err := db.Exec(fmt.Sprintf(`
 		IF OBJECT_ID('%s','U') IS NULL
 		CREATE TABLE %s (

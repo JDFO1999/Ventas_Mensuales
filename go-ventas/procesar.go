@@ -724,7 +724,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				}
 				mu.Lock()
 				if ok {
-					logInfo("CA: %s %s %s OK", store.Codigo, MesesES[m])
+					logInfo("CA: %s %s OK", store.Codigo, MesesES[m])
 				} else {
 					logError("CA: %s %s FALLO: %v", store.Codigo, MesesES[m], lastErr)
 					erroresGlobal++
