@@ -9,7 +9,6 @@ import (
 	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/xuri/excelize/v2"
 )
 
 const (
@@ -17,10 +16,6 @@ const (
 	SQLDatabase = "Sistemas"
 	SQLUser     = "Sa"
 	SQLPassword = "Alkosto123"
-
-	SQLServerCA   = "10.10.10.40"
-	SQLUserCA     = "usuario_app"
-	SQLPasswordCA = "JoseJose*69*"
 )
 
 func ConectarSQL() (*sql.DB, error) {
@@ -35,21 +30,9 @@ func ConectarSQL() (*sql.DB, error) {
 	return db, nil
 }
 
-func ConectarSQL_CA(codigo string) (*sql.DB, error) {
-	dbName := "CA_" + codigo
-
-	masterStr := fmt.Sprintf("server=%s;database=master;user id=%s;password=%s;encrypt=disable;connection timeout=10",
-		SQLServerCA, SQLUserCA, SQLPasswordCA)
-	masterDB, err := sql.Open("mssql", masterStr)
-	if err == nil {
-		if _, err := masterDB.Exec(fmt.Sprintf("IF DB_ID('%s') IS NULL CREATE DATABASE [%s]", dbName, dbName)); err != nil {
-			fmt.Printf("\n  ADVERTENCIA: no se pudo crear BD %s: %v\n", dbName, err)
-		}
-		masterDB.Close()
-	}
-
-	connStr := fmt.Sprintf("server=%s;database=%s;user id=%s;password=%s;encrypt=disable;connection timeout=10",
-		SQLServerCA, dbName, SQLUserCA, SQLPasswordCA)
+func ConectarSQL_CA(_ string) (*sql.DB, error) {
+	connStr := fmt.Sprintf("server=%s;database=BD_Tiendas;user id=%s;password=%s;encrypt=disable;connection timeout=10",
+		SQLServer, SQLUser, SQLPassword)
 	db, err := sql.Open("mssql", connStr)
 	if err != nil {
 		return nil, err
@@ -280,10 +263,11 @@ func LeerDatosDesdeSQL(db *sql.DB, year, month int) (map[string]map[int]VentaPor
 	return data, rows.Err()
 }
 
-func CrearTablaPosVentasCA(db *sql.DB) error {
-	_, err := db.Exec(`
-		IF OBJECT_ID('Pos_Ventas_CA','U') IS NULL
-		CREATE TABLE Pos_Ventas_CA (
+func CrearTablaPosVentasCA(db *sql.DB, codigo string) error {
+	tableName := "POS_CA_" + codigo
+	_, err := db.Exec(fmt.Sprintf(`
+		IF OBJECT_ID('%s','U') IS NULL
+		CREATE TABLE %s (
 			Fecha     DATE NOT NULL,
 			Hora      TINYINT NOT NULL,
 			Tienda    VARCHAR(6) NOT NULL,
@@ -322,22 +306,23 @@ func CrearTablaPosVentasCA(db *sql.DB) error {
 			NroCie    VARCHAR(8) NULL,
 			FechaCie  DATE NULL,
 			FechaCarga DATETIME DEFAULT GETDATE(),
-			CONSTRAINT PK_Pos_Ventas_CA PRIMARY KEY (Tienda, Caja, Numero, Tipo, Codigo)
+			CONSTRAINT PK_%s PRIMARY KEY (Tienda, Caja, Numero, Tipo, Codigo)
 		)
-	`)
+	`, tableName, tableName, tableName))
 	return err
 }
 
-func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
+func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) error {
 	const chunkSize = 5000
-	query := `INSERT INTO Pos_Ventas_CA (Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip,
+	tableName := "POS_CA_" + codigo
+	query := fmt.Sprintf(`INSERT INTO %s (Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip,
 		CodVen, Modelo, Serial, Cantidad, NCntd, NPvpDol, NPvp2Dol, NPvp3Dol, NPvpCop,
 		Precio, NPrecio, IGV, NoDscto, CodCli, Anulada, Depto, Familia,
 		Costo, NCosDol, Pvpt, Oferta, Devlto, Margen, PvpVen, LPesado, NroCie, FechaCie)
 		VALUES (?,?,?,?,?,?,?,?,?,?,
 			?,?,?,?,?,?,?,?,?,
 			?,?,?,?,?,?,?,?,
-			?,?,?,?,?,?,?,?,?,?)`
+			?,?,?,?,?,?,?,?,?,?)`, tableName)
 
 	for i := 0; i < len(registros); i += chunkSize {
 		end := i + chunkSize
@@ -388,8 +373,9 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro) error {
 
 func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 	var count int
+	tableName := "POS_CA_" + codigo
 	err := db.QueryRow(
-		"SELECT COUNT(*) FROM Pos_Ventas_CA WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
+		fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
 		codigo, year, month,
 	).Scan(&count)
 	if err != nil {
@@ -398,109 +384,4 @@ func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 	return count
 }
 
-func GenerarExcelCA_Stream(tiendas []string, tipo, codigo string, mesIni, mesFin, year int, outputPath string) (int, error) {
-	f := excelize.NewFile()
-	defer f.Close()
 
-	f.DeleteSheet("Sheet1")
-
-	totalCount := 0
-
-	for m := mesIni; m <= mesFin; m++ {
-		ws := MesesES[m] + " " + fmt.Sprintf("%d", year)
-		f.NewSheet(ws)
-
-		sw, err := f.NewStreamWriter(ws)
-		if err != nil {
-			return totalCount, err
-		}
-
-		headers := []interface{}{"TIENDA", "TIPO", "NUMERO", "CODIGO", "DESCRIPCION", "CANTIDAD", "FECHA"}
-		if err := sw.SetRow("A1", headers); err != nil {
-			return totalCount, err
-		}
-
-		headerStyle, _ := f.NewStyle(&excelize.Style{
-			Fill: excelize.Fill{Type: "pattern", Color: []string{"C00000"}, Pattern: 1},
-			Font: &excelize.Font{Bold: true, Size: 11, Color: "FFFFFF"},
-		})
-		f.SetCellStyle(ws, "A1", "G1", headerStyle)
-
-		rowNum := 2
-		monthCount := 0
-
-		for _, codTienda := range tiendas {
-			dbCA, err := ConectarSQL_CA(codTienda)
-			if err != nil {
-				continue
-			}
-
-			query := `SELECT Tienda, Tipo, Numero, Codigo, Descrip, Cantidad, Fecha
-				FROM Pos_Ventas_CA
-				WHERE YEAR(Fecha)=? AND MONTH(Fecha)=?`
-			var args []interface{}
-			args = append(args, year, m)
-			args = append(args, codTienda)
-			query += " AND Tienda=?"
-			if tipo != "" {
-				query += " AND Tipo=?"
-				args = append(args, tipo)
-			}
-			if codigo != "" {
-				query += " AND Codigo=?"
-				args = append(args, codigo)
-			}
-
-			rows, err := dbCA.Query(query, args...)
-			if err != nil {
-				dbCA.Close()
-				continue
-			}
-
-			var tienda, tipoVal, numero, codigoVal, descrip string
-			var cantidad float64
-			var fecha time.Time
-
-			for rows.Next() {
-				if err := rows.Scan(&tienda, &tipoVal, &numero, &codigoVal, &descrip, &cantidad, &fecha); err != nil {
-					continue
-				}
-				descrip = strings.ReplaceAll(descrip, ";", " ")
-				cell, _ := excelize.CoordinatesToCellName(1, rowNum)
-				row := []interface{}{tienda, tipoVal, numero, codigoVal, descrip, cantidad, fecha.Format("02/01/2006")}
-				sw.SetRow(cell, row)
-				monthCount++
-				rowNum++
-			}
-			rows.Close()
-			dbCA.Close()
-		}
-
-		if err := sw.Flush(); err != nil {
-			return totalCount, err
-		}
-
-		for c := 1; c <= 7; c++ {
-			col, _ := excelize.ColumnNumberToName(c)
-			f.SetColWidth(ws, col, col, 18)
-		}
-		f.SetColWidth(ws, "E", "E", 50)
-
-		totalCount += monthCount
-		fmt.Printf("\r  %s: %d filas\n", ws, monthCount)
-	}
-
-	if totalCount == 0 {
-		return 0, fmt.Errorf("sin datos")
-	}
-
-	idx, _ := f.GetSheetIndex(MesesES[mesIni] + " " + fmt.Sprintf("%d", year))
-	f.SetActiveSheet(idx)
-
-	if err := f.SaveAs(outputPath); err != nil {
-		return totalCount, err
-	}
-
-	fmt.Printf("\n  Excel: %d filas totales.\n", totalCount)
-	return totalCount, nil
-}

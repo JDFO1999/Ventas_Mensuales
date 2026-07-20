@@ -586,7 +586,7 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 	}
 	defer dbCA.Close()
 
-	CrearTablaPosVentasCA(dbCA)
+	CrearTablaPosVentasCA(dbCA, codigo)
 
 	pfx := func(format string, args ...interface{}) string {
 		if idx > 0 {
@@ -646,7 +646,7 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 		}
 
 		fmt.Printf("\r  %s", pfx("%s  [%s] %d regs insertando...", codigo, filepath.Base(dbfPath), len(regs)))
-		if err := InsertarVentasCA(dbCA, regs); err != nil {
+		if err := InsertarVentasCA(dbCA, regs, codigo); err != nil {
 			fmt.Printf("\n  %s", pfx("%s  [%s] ERROR insert: %v", codigo, filepath.Base(dbfPath), err))
 			continue
 		}
