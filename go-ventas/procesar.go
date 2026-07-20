@@ -588,13 +588,20 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 
 	CrearTablaPosVentasCA(dbCA)
 
+	pfx := func(format string, args ...interface{}) string {
+		if idx > 0 {
+			return fmt.Sprintf("[%d/%d] "+format, append([]interface{}{idx, total}, args...)...)
+		}
+		return fmt.Sprintf(format, args...)
+	}
+
 	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
 	if err != nil {
 		if modo == "S" && sucursal.RutaIP != "" {
-			fmt.Printf("\r  [%d/%d] %s  S fallo, intentando IP...", idx, total, codigo)
+			fmt.Printf("\r  %s", pfx("%s  S fallo, intentando IP...", codigo))
 			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
 		} else if modo == "IP" {
-			fmt.Printf("\r  [%d/%d] %s  IP fallo, intentando S...", idx, total, codigo)
+			fmt.Printf("\r  %s", pfx("%s  IP fallo, intentando S...", codigo))
 			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
 		}
 	}
@@ -622,17 +629,15 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 
 		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
 
-		if _, err := os.Stat(dbfPath); err != nil {
+		info, errStat := os.Stat(dbfPath)
+		if errStat != nil {
 			continue
 		}
 
 		tStart := time.Now()
-		if info, err := os.Stat(dbfPath); err == nil {
-			sizeMB := float64(info.Size()) / (1024 * 1024)
-			fmt.Printf("\r  [%d/%d] %s  [%s] %.1f MB leyendo...", idx, total, codigo, filepath.Base(dbfPath), sizeMB)
-		} else {
-			fmt.Printf("\r  [%d/%d] %s  [%s] leyendo...", idx, total, codigo, filepath.Base(dbfPath))
-		}
+		sizeMB := float64(info.Size()) / (1024 * 1024)
+		fmt.Printf("\r  %s", pfx("%s  [%s] %.1f MB leyendo...", codigo, filepath.Base(dbfPath), sizeMB))
+
 		regs, err := LeerArchivoCA(dbfPath, year, month, codigo, posNum)
 		tElapsed := time.Since(tStart)
 
@@ -640,14 +645,14 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 			continue
 		}
 
-		fmt.Printf("\r  [%d/%d] %s  [%s] %d regs insertando...", idx, total, codigo, filepath.Base(dbfPath), len(regs))
+		fmt.Printf("\r  %s", pfx("%s  [%s] %d regs insertando...", codigo, filepath.Base(dbfPath), len(regs)))
 		if err := InsertarVentasCA(dbCA, regs); err != nil {
-			fmt.Printf("\n  [%d/%d] %s  [%s] ERROR insert: %v", idx, total, codigo, filepath.Base(dbfPath), err)
+			fmt.Printf("\n  %s", pfx("%s  [%s] ERROR insert: %v", codigo, filepath.Base(dbfPath), err))
 			continue
 		}
 		totalInsert += len(regs)
 
-		fmt.Printf("\n  [%d/%d] %s  [%s] %d regs, %.1fs", idx, total, codigo, filepath.Base(dbfPath), len(regs), tElapsed.Seconds())
+		fmt.Printf("\n  %s", pfx("%s  [%s] %d regs, %.1fs", codigo, filepath.Base(dbfPath), len(regs), tElapsed.Seconds()))
 	}
 
 	if totalInsert == 0 {

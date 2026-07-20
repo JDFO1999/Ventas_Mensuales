@@ -42,7 +42,9 @@ func ConectarSQL_CA(codigo string) (*sql.DB, error) {
 		SQLServerCA, SQLUserCA, SQLPasswordCA)
 	masterDB, err := sql.Open("mssql", masterStr)
 	if err == nil {
-		masterDB.Exec(fmt.Sprintf("IF DB_ID('%s') IS NULL CREATE DATABASE [%s]", dbName, dbName))
+		if _, err := masterDB.Exec(fmt.Sprintf("IF DB_ID('%s') IS NULL CREATE DATABASE [%s]", dbName, dbName)); err != nil {
+			fmt.Printf("\n  ADVERTENCIA: no se pudo crear BD %s: %v\n", dbName, err)
+		}
 		masterDB.Close()
 	}
 
@@ -427,8 +429,8 @@ func GenerarExcelCA_Stream(tiendas []string, tipo, codigo string, mesIni, mesFin
 		rowNum := 2
 		monthCount := 0
 
-		for _, codigo := range tiendas {
-			dbCA, err := ConectarSQL_CA(codigo)
+		for _, codTienda := range tiendas {
+			dbCA, err := ConectarSQL_CA(codTienda)
 			if err != nil {
 				continue
 			}
@@ -438,7 +440,7 @@ func GenerarExcelCA_Stream(tiendas []string, tipo, codigo string, mesIni, mesFin
 				WHERE YEAR(Fecha)=? AND MONTH(Fecha)=?`
 			var args []interface{}
 			args = append(args, year, m)
-			args = append(args, codigo)
+			args = append(args, codTienda)
 			query += " AND Tienda=?"
 			if tipo != "" {
 				query += " AND Tipo=?"
