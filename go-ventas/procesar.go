@@ -577,7 +577,7 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 	return registros, nil
 }
 
-func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int) error {
+func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int, deleteExisting bool) error {
 	codigo := sucursal.Codigo
 
 	dbCA, err := ConectarSQL_CA(codigo)
@@ -587,6 +587,12 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 	defer dbCA.Close()
 
 	CrearTablaPosVentasCA(dbCA, codigo)
+
+	if deleteExisting {
+		if err := BorrarDatosTiendaCA(dbCA, codigo, year, month); err != nil {
+			logError("CA: error borrando datos existentes de %s %d/%d: %v", codigo, month, year, err)
+		}
+	}
 
 	pfx := func(format string, args ...interface{}) string {
 		if idx > 0 {
@@ -721,7 +727,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 					var lastErr error
 					ok := false
 					for intento := 1; intento <= 3; intento++ {
-						err := ProcesarTiendaCA(s, year, mes, modo, -1, -1)
+						err := ProcesarTiendaCA(s, year, mes, modo, -1, -1, false)
 						if err == nil || strings.Contains(err.Error(), "sin datos") {
 							ok = true
 							break
@@ -759,7 +765,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				if intento > 1 {
 					fmt.Printf(" (reintento %d...)", intento)
 				}
-				err := ProcesarTiendaCA(s, year, m, modo, i+1, total)
+				err := ProcesarTiendaCA(s, year, m, modo, i+1, total, true)
 				if err == nil || strings.Contains(err.Error(), "sin datos") {
 					ok = true
 					break

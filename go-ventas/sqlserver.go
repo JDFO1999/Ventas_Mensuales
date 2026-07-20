@@ -305,10 +305,9 @@ func CrearTablaPosVentasCA(db *sql.DB, codigo string) error {
 			LPesado   BIT NULL,
 			NroCie    VARCHAR(8) NULL,
 			FechaCie  DATE NULL,
-			FechaCarga DATETIME DEFAULT GETDATE(),
-			CONSTRAINT PK_%s PRIMARY KEY (Tienda, Caja, Numero, Tipo, Codigo)
+			FechaCarga DATETIME DEFAULT GETDATE()
 		)
-	`, tableName, tableName, tableName))
+	`, tableName, tableName))
 	return err
 }
 
@@ -348,17 +347,6 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) er
 				r.Costo, r.NCosDol, r.Pvpt, r.Oferta, r.Devlto, r.Margen, r.PvpVen, r.LPesado, r.NroCie, fechaCie,
 			)
 			if err != nil {
-				if strings.Contains(err.Error(), "PRIMARY") ||
-					strings.Contains(err.Error(), "clave duplicada") ||
-					strings.Contains(err.Error(), "duplicada") ||
-					strings.Contains(err.Error(), "duplicate") {
-					tx.Rollback()
-					tx, err = db.Begin()
-					if err != nil {
-						return err
-					}
-					continue
-				}
 				tx.Rollback()
 				return err
 			}
@@ -369,6 +357,15 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) er
 		}
 	}
 	return nil
+}
+
+func BorrarDatosTiendaCA(db *sql.DB, codigo string, year, month int) error {
+	tableName := "POS_CA_" + codigo
+	_, err := db.Exec(
+		fmt.Sprintf("DELETE FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
+		codigo, year, month,
+	)
+	return err
 }
 
 func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
