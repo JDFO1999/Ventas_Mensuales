@@ -463,17 +463,10 @@ func menuCA() {
 
 	sucursales = seleccionarTiendasCA(sucursales)
 
-	tipoFiltro, codigoFiltro, mesIniExcel, mesFinExcel := pedirFiltrosCA()
-
 	fmt.Println("\n" + strings.Repeat("-", 40))
 	fmt.Println("  Procesando CA (insertando datos faltantes)...")
 	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
-	}
-
-	fmt.Print("\n¿Generar Excel? [S/N]: ")
-	if strings.ToUpper(leerLinea()) == "S" {
-		generarExcelCA(db, sucursales, tipoFiltro, codigoFiltro, mesIniExcel, mesFinExcel, anio)
 	}
 
 	fmt.Print("\nPresione Enter para salir...")
@@ -555,84 +548,6 @@ func seleccionarTiendasCA(sucursales []Sucursal) []Sucursal {
 		return sel
 	}
 	return sucursales
-}
-
-func pedirFiltrosCA() (string, string, int, int) {
-	fmt.Println("\n" + strings.Repeat("-", 40))
-	fmt.Println("  FILTROS DEL REPORTE:")
-	fmt.Println("  Tipo: [1] Solo FA  [2] Solo DV  [3] Todos")
-	tipoFiltro := ""
-	switch leerEntero("  > ") {
-	case 1: tipoFiltro = "FA"
-	case 2: tipoFiltro = "DV"
-	}
-
-	fmt.Print("  Codigo de producto (Enter = todos): ")
-	codigoFiltro := leerLinea()
-
-	fmt.Println("  Rango de fechas:")
-	fmt.Println("    [1] Mes completo (ej: 7 = Julio)")
-	fmt.Println("    [2] Rango de meses (ej: 1 a 7)")
-	fmt.Println("    [3] Fecha exacta (dd/mm)")
-	opFecha := leerEntero("  > ")
-
-	var mesIniExcel, mesFinExcel int
-	switch opFecha {
-	case 1:
-		mes := leerEntero("    Mes (1-12): ")
-		mesIniExcel = mes
-		mesFinExcel = mes
-	case 2:
-		mesIniExcel = leerEntero("    Mes inicio (1-12): ")
-		mesFinExcel = leerEntero("    Mes fin (1-12): ")
-	case 3:
-		fmt.Print("    Fecha (dd/mm/aaaa): ")
-		fechaStr := leerLinea()
-		partes := strings.Split(fechaStr, "/")
-		if len(partes) == 3 {
-			var dd, mm, yy int
-			fmt.Sscanf(partes[0], "%d", &dd)
-			fmt.Sscanf(partes[1], "%d", &mm)
-			fmt.Sscanf(partes[2], "%d", &yy)
-			mesIniExcel = mm
-			mesFinExcel = mm
-		}
-	}
-	return tipoFiltro, codigoFiltro, mesIniExcel, mesFinExcel
-}
-
-func generarExcelCA(db *sql.DB, sucursales []Sucursal, tipoFiltro, codigoFiltro string, mesIniExcel, mesFinExcel, anio int) {
-	var filtroTipo string
-	switch tipoFiltro {
-	case "FA": filtroTipo = "FA"
-	case "DV": filtroTipo = "DV"
-	}
-
-	var tiendasCod []string
-	for _, s := range sucursales {
-		tiendasCod = append(tiendasCod, s.Codigo)
-	}
-
-	nombreArchivo := "Ventas_CA"
-	if filtroTipo != "" {
-		nombreArchivo += "_" + filtroTipo
-	}
-	if codigoFiltro != "" {
-		nombreArchivo += "_" + codigoFiltro
-	}
-	outputPath := fmt.Sprintf("%s\\%s_%d.xlsx", outputDir, nombreArchivo, anio)
-
-	if mesIniExcel == 0 {
-		mesIniExcel = 1
-		mesFinExcel = int(time.Now().Month())
-	}
-	fmt.Println()
-	count, err := GenerarExcelCA_Stream(tiendasCod, filtroTipo, codigoFiltro, mesIniExcel, mesFinExcel, anio, outputPath)
-	if err != nil {
-		fmt.Printf("  ERROR Excel: %v\n", err)
-	} else {
-		fmt.Printf("\nArchivo CA guardado: %s (%d registros)\n", outputPath, count)
-	}
 }
 
 func verHistorial() {
