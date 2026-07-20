@@ -661,7 +661,7 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 	return nil
 }
 
-func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string) error {
+func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, modo string) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logError("PANIC en ProcesarCA: %v", r)
@@ -669,20 +669,18 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string)
 	}()
 	_ = db // solo para consultar Sucursal
 	mesActual := int(time.Now().Month())
-	mesHasta := month
-	if month <= 0 {
-		month = 1
-		mesHasta = mesActual
+	if mesFin <= 0 {
+		mesFin = mesActual
 	}
 
 	total := len(sucursales)
-	logInfo("CA: Iniciando %d tiendas, meses %d a %d, modo=%s", total, month, mesHasta, modo)
+	logInfo("CA: Iniciando %d tiendas, meses %d a %d, modo=%s", total, mesInicio, mesFin, modo)
 	tStart := time.Now()
 
 	// --- Meses cerrados en paralelo ---
 	var mesesCerrados []int
 	var mesActualIndice int
-	for m := month; m <= mesHasta; m++ {
+	for m := mesInicio; m <= mesFin; m++ {
 		if m == mesActual && year == time.Now().Year() {
 			mesActualIndice = m
 		} else {

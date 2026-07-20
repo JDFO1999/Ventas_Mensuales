@@ -463,9 +463,13 @@ func menuCA() {
 
 	sucursales = seleccionarTiendasCA(sucursales)
 
+	fmt.Println("\nRango de meses a procesar:")
+	mesInicio := leerEntero("  Mes inicio (1-12): ")
+	mesFin := leerEntero("  Mes fin (1-12): ")
+
 	fmt.Println("\n" + strings.Repeat("-", 40))
 	fmt.Println("  Procesando CA (insertando datos faltantes)...")
-	if err := ProcesarCA(db, sucursales, anio, 0, modo); err != nil {
+	if err := ProcesarCA(db, sucursales, anio, mesInicio, mesFin, modo); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
