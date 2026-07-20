@@ -577,7 +577,7 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 	return registros, nil
 }
 
-func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int, deleteExisting bool) error {
+func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int, forceFull bool) error {
 	codigo := sucursal.Codigo
 
 	dbCA, err := ConectarSQL_CA(codigo)
@@ -587,12 +587,6 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 	defer dbCA.Close()
 
 	CrearTablaPosVentasCA(dbCA, codigo)
-
-	if deleteExisting {
-		if err := BorrarDatosTiendaCA(dbCA, codigo, year, month); err != nil {
-			logError("CA: error borrando datos existentes de %s %d/%d: %v", codigo, month, year, err)
-		}
-	}
 
 	pfx := func(format string, args ...interface{}) string {
 		if idx > 0 {
@@ -652,8 +646,15 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 		}
 
 		fmt.Printf("\r  %s", pfx("%s  [%s] %d regs insertando...", codigo, filepath.Base(dbfPath), len(regs)))
-		if err := InsertarVentasCA(dbCA, regs, codigo); err != nil {
-			fmt.Printf("\n  %s", pfx("%s  [%s] ERROR insert: %v", codigo, filepath.Base(dbfPath), err))
+		var insertErr error
+		if forceFull {
+			BorrarDatosTiendaCA(dbCA, codigo, year, month)
+			insertErr = InsertarVentasCA(dbCA, regs, codigo)
+		} else {
+			insertErr = InsertarVentasCA_Incremental(dbCA, regs, codigo, year, month)
+		}
+		if insertErr != nil {
+			fmt.Printf("\n  %s", pfx("%s  [%s] ERROR insert: %v", codigo, filepath.Base(dbfPath), insertErr))
 			continue
 		}
 		totalInsert += len(regs)
@@ -667,7 +668,7 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 	return nil
 }
 
-func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, modo string) error {
+func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, modo string, forceFull bool) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logError("PANIC en ProcesarCA: %v", r)
@@ -679,8 +680,13 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 		mesFin = mesActual
 	}
 
+	if forceFull {
+		logInfo("CA: reprocesando completo, %d tiendas, meses %d a %d, modo=%s", len(sucursales), mesInicio, mesFin, modo)
+	} else {
+		logInfo("CA: incremental, %d tiendas, meses %d a %d, modo=%s", len(sucursales), mesInicio, mesFin, modo)
+	}
+
 	total := len(sucursales)
-	logInfo("CA: Iniciando %d tiendas, meses %d a %d, modo=%s", total, mesInicio, mesFin, modo)
 	tStart := time.Now()
 
 	// --- Meses cerrados en paralelo ---
@@ -765,7 +771,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				if intento > 1 {
 					fmt.Printf(" (reintento %d...)", intento)
 				}
-				err := ProcesarTiendaCA(s, year, m, modo, i+1, total, true)
+				err := ProcesarTiendaCA(s, year, m, modo, i+1, total, forceFull)
 				if err == nil || strings.Contains(err.Error(), "sin datos") {
 					ok = true
 					break

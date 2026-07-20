@@ -368,6 +368,41 @@ func BorrarDatosTiendaCA(db *sql.DB, codigo string, year, month int) error {
 	return err
 }
 
+func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codigo string, year, month int) error {
+	tableName := "POS_CA_" + codigo
+
+	existing := make(map[string]bool)
+	rows, err := db.Query(
+		fmt.Sprintf("SELECT Caja, Numero, Tipo, Codigo FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
+		codigo, year, month,
+	)
+	if err == nil {
+		for rows.Next() {
+			var caja int
+			var numero, tipo, cod string
+			if err := rows.Scan(&caja, &numero, &tipo, &cod); err == nil {
+				key := fmt.Sprintf("%d|%s|%s|%s", caja, numero, tipo, cod)
+				existing[key] = true
+			}
+		}
+		rows.Close()
+	}
+
+	var nuevos []VentaCARegistro
+	for _, r := range registros {
+		key := fmt.Sprintf("%d|%s|%s|%s", r.Caja, r.Numero, r.Tipo, r.Codigo)
+		if !existing[key] {
+			nuevos = append(nuevos, r)
+		}
+	}
+
+	if len(nuevos) == 0 {
+		return nil
+	}
+
+	return InsertarVentasCA(db, nuevos, codigo)
+}
+
 func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 	var count int
 	tableName := "POS_CA_" + codigo
