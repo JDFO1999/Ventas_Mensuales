@@ -319,7 +319,7 @@ func procesarAutomaticoCA(year, month int, cfg Config, headless bool) {
 		return
 	}
 
-	ProcesarCA(db, sucursales, year, 1, 0, cfg.Modo, false)
+	ProcesarCA(db, sucursales, year, 1, 0, cfg.Modo, "AUTOMATICO")
 
 	fmt.Printf("[%s] CA Completado.\n", time.Now().Format("15:04:05"))
 	logHistorial(fmt.Sprintf("CA: Completado en %.1f min", time.Since(tStart).Minutes()))

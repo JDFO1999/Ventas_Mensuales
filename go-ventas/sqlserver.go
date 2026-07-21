@@ -361,15 +361,6 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) er
 	return nil
 }
 
-func BorrarDatosTiendaCA(db *sql.DB, codigo string, year, month int) error {
-	tableName := "POS_CA_" + codigo
-	_, err := db.Exec(
-		fmt.Sprintf("DELETE FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
-		codigo, year, month,
-	)
-	return err
-}
-
 func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codigo string, year, month int) error {
 	tableName := "POS_CA_" + codigo
 
@@ -416,6 +407,36 @@ func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
 		return 0
 	}
 	return count
+}
+
+func CrearTablaH_Tiendas(db *sql.DB) error {
+	_, err := db.Exec(`
+		IF OBJECT_ID('H_Tiendas','U') IS NULL
+		CREATE TABLE H_Tiendas (
+			Id              INT IDENTITY(1,1) PRIMARY KEY,
+			FechaEjecucion  DATETIME NOT NULL DEFAULT GETDATE(),
+			Tienda          VARCHAR(6) NOT NULL,
+			Anio            INT NOT NULL,
+			Mes             INT NOT NULL,
+			RegistrosDBF    INT NOT NULL DEFAULT 0,
+			RegistrosSQL    INT NOT NULL DEFAULT 0,
+			Insertados      INT NOT NULL DEFAULT 0,
+			Estado          VARCHAR(20) NOT NULL,
+			DuracionSeg     INT NULL,
+			Modo            VARCHAR(10) NOT NULL,
+			TipoEjecucion   VARCHAR(20) NOT NULL
+		)
+	`)
+	return err
+}
+
+func InsertarH_Tiendas(db *sql.DB, tienda string, anio, mes int, registrosDBF, registrosSQL, insertados int, estado string, duracionSeg int, modo string, tipoEjecucion string) error {
+	_, err := db.Exec(
+		`INSERT INTO H_Tiendas (Tienda, Anio, Mes, RegistrosDBF, RegistrosSQL, Insertados, Estado, DuracionSeg, Modo, TipoEjecucion)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		tienda, anio, mes, registrosDBF, registrosSQL, insertados, estado, duracionSeg, modo, tipoEjecucion,
+	)
+	return err
 }
 
 

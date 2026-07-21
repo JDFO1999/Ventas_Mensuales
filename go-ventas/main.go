@@ -467,19 +467,9 @@ func menuCA() {
 	mesInicio := leerEntero("  Mes inicio (1-12): ")
 	mesFin := leerEntero("  Mes fin (1-12): ")
 
-	forceFull := false
-	fmt.Print("\n  Reprocesar todo desde cero? (S/N) [N]: ")
-	resp := strings.ToUpper(leerLinea())
-	if resp == "S" {
-		forceFull = true
-		fmt.Println("  Modo: reprocesado completo (borra y reinserta todo)")
-	} else {
-		fmt.Println("  Modo: incremental (solo inserta datos faltantes)")
-	}
-
 	fmt.Println("\n" + strings.Repeat("-", 40))
 	fmt.Println("  Procesando CA (insertando datos faltantes)...")
-	if err := ProcesarCA(db, sucursales, anio, mesInicio, mesFin, modo, forceFull); err != nil {
+	if err := ProcesarCA(db, sucursales, anio, mesInicio, mesFin, modo, "MANUAL"); err != nil {
 		fmt.Printf("  ERROR: %v\n", err)
 	}
 
