@@ -741,6 +741,9 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				mStart := time.Now()
 				totalDBF := ContarRegistrosDBF_Mes(store, year, m, modo)
 				if totalDBF == 0 {
+					mu.Lock()
+					logInfo("CA: %s %s sin datos DBF", store.Codigo, MesesES[m])
+					mu.Unlock()
 					continue
 				}
 
