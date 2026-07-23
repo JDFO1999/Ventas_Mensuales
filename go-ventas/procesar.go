@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -11,6 +12,30 @@ import (
 	"sync"
 	"time"
 )
+
+func pingHost(ip string) bool {
+	cmd := exec.Command("ping", "-n", "1", "-w", "1500", ip)
+	return cmd.Run() == nil
+}
+
+type listarResult struct {
+	dirs []string
+	err  error
+}
+
+func listarPOSConTimeout(codigo, rutaIP, rutaDBF, modo string, timeout time.Duration) ([]string, error) {
+	ch := make(chan listarResult, 1)
+	go func() {
+		dirs, err := ListarPOS(codigo, rutaIP, rutaDBF, modo)
+		ch <- listarResult{dirs, err}
+	}()
+	select {
+	case r := <-ch:
+		return r.dirs, r.err
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("timeout (%v) accediendo a %s (%s)", timeout, codigo, rutaIP)
+	}
+}
 
 func ListarPOS(codigo, rutaIP, rutaDBF, modo string) ([]string, error) {
 	var path string
@@ -580,12 +605,18 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 func ContarRegistrosDBF_Mes(sucursal Sucursal, year, month int, modo string) int {
 	codigo := sucursal.Codigo
 
-	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	if modo == "IP" && sucursal.RutaIP != "" {
+		pingHost(sucursal.RutaIP) // intento rapido, si falla no importa
+	}
+
+	const timeout = 60 * time.Second
+
+	posDirs, err := listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo, timeout)
 	if err != nil {
 		if modo == "S" && sucursal.RutaIP != "" {
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP", timeout)
 		} else if modo == "IP" {
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S", timeout)
 		}
 	}
 	if err != nil {
@@ -635,6 +666,10 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 
 	CrearTablaPosVentasCA(dbCA, codigo)
 
+	if modo == "IP" && sucursal.RutaIP != "" {
+		pingHost(sucursal.RutaIP)
+	}
+
 	pfx := func(format string, args ...interface{}) string {
 		if idx > 0 {
 			return fmt.Sprintf("[%d/%d] "+format, append([]interface{}{idx, total}, args...)...)
@@ -642,14 +677,15 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 		return fmt.Sprintf(format, args...)
 	}
 
-	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	const listTimeout = 60 * time.Second
+	posDirs, err := listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo, listTimeout)
 	if err != nil {
 		if modo == "S" && sucursal.RutaIP != "" {
 			fmt.Printf("\r  %s", pfx("%s  S fallo, intentando IP...", codigo))
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP", listTimeout)
 		} else if modo == "IP" {
 			fmt.Printf("\r  %s", pfx("%s  IP fallo, intentando S...", codigo))
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S", listTimeout)
 		}
 	}
 	if err != nil {
