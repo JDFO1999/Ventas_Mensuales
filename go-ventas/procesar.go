@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -12,30 +11,6 @@ import (
 	"sync"
 	"time"
 )
-
-func pingHost(ip string) bool {
-	cmd := exec.Command("ping", "-n", "1", "-w", "1500", ip)
-	return cmd.Run() == nil
-}
-
-type listarResult struct {
-	dirs []string
-	err  error
-}
-
-func listarPOSConTimeout(codigo, rutaIP, rutaDBF, modo string, timeout time.Duration) ([]string, error) {
-	ch := make(chan listarResult, 1)
-	go func() {
-		dirs, err := ListarPOS(codigo, rutaIP, rutaDBF, modo)
-		ch <- listarResult{dirs, err}
-	}()
-	select {
-	case r := <-ch:
-		return r.dirs, r.err
-	case <-time.After(timeout):
-		return nil, fmt.Errorf("timeout (%v) accediendo a %s (%s)", timeout, codigo, rutaIP)
-	}
-}
 
 func ListarPOS(codigo, rutaIP, rutaDBF, modo string) ([]string, error) {
 	var path string
@@ -605,18 +580,12 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 func ContarRegistrosDBF_Mes(sucursal Sucursal, year, month int, modo string) int {
 	codigo := sucursal.Codigo
 
-	if modo == "IP" && sucursal.RutaIP != "" {
-		pingHost(sucursal.RutaIP) // intento rapido, si falla no importa
-	}
-
-	const timeout = 60 * time.Second
-
-	posDirs, err := listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo, timeout)
+	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
 	if err != nil {
 		if modo == "S" && sucursal.RutaIP != "" {
-			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP", timeout)
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
 		} else if modo == "IP" {
-			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S", timeout)
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
 		}
 	}
 	if err != nil {
@@ -666,10 +635,6 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 
 	CrearTablaPosVentasCA(dbCA, codigo)
 
-	if modo == "IP" && sucursal.RutaIP != "" {
-		pingHost(sucursal.RutaIP)
-	}
-
 	pfx := func(format string, args ...interface{}) string {
 		if idx > 0 {
 			return fmt.Sprintf("[%d/%d] "+format, append([]interface{}{idx, total}, args...)...)
@@ -677,15 +642,14 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 		return fmt.Sprintf(format, args...)
 	}
 
-	const listTimeout = 60 * time.Second
-	posDirs, err := listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo, listTimeout)
+	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
 	if err != nil {
 		if modo == "S" && sucursal.RutaIP != "" {
 			fmt.Printf("\r  %s", pfx("%s  S fallo, intentando IP...", codigo))
-			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP", listTimeout)
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
 		} else if modo == "IP" {
 			fmt.Printf("\r  %s", pfx("%s  IP fallo, intentando S...", codigo))
-			posDirs, err = listarPOSConTimeout(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S", listTimeout)
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
 		}
 	}
 	if err != nil {
@@ -762,11 +726,14 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 	var wg sync.WaitGroup
 	erroresGlobal := 0
 	var mu sync.Mutex
+	sem := make(chan struct{}, 6)
 
 	for _, s := range sucursales {
+		sem <- struct{}{}
 		wg.Add(1)
 		go func(store Sucursal) {
 			defer wg.Done()
+			defer func() { <-sem }()
 			defer func() {
 				if r := recover(); r != nil {
 					logError("CA: PANIC en %s: %v", store.Codigo, r)
