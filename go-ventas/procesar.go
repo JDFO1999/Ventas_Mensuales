@@ -758,8 +758,16 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 					mu.Unlock()
 					continue
 				}
-				totalSQL := ContarTiendaMes_SQL(dbCA, store.Codigo, year, m)
+				totalSQL, errCnt := ContarTiendaMes_SQL(dbCA, store.Codigo, year, m)
 				dbCA.Close()
+
+				if errCnt != nil {
+					mu.Lock()
+					logError("CA: %s %s error contando SQL: %v", store.Codigo, MesesES[m], errCnt)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+					mu.Unlock()
+					continue
+				}
 
 				if totalDBF == totalSQL {
 					mu.Lock()
@@ -771,6 +779,28 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 
 				var lastErr error
 				ok := false
+
+				if totalSQL > totalDBF {
+					dbCA2, err := ConectarSQL_CA(store.Codigo)
+					if err != nil {
+						mu.Lock()
+						logError("CA: %s %s FALLO conexion borrado: %v", store.Codigo, MesesES[m], err)
+						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+						mu.Unlock()
+						continue
+					}
+					if err := BorrarDatosTiendaCA(dbCA2, store.Codigo, year, m); err != nil {
+						dbCA2.Close()
+						mu.Lock()
+						logError("CA: %s %s error borrando: %v", store.Codigo, MesesES[m], err)
+						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+						mu.Unlock()
+						continue
+					}
+					dbCA2.Close()
+					logInfo("CA: %s %s SQL>DBF (%d>%d), borrado y reinsertando...", store.Codigo, MesesES[m], totalSQL, totalDBF)
+				}
+
 				for intento := 1; intento <= 3; intento++ {
 					err := ProcesarTiendaCA(store, year, m, modo, 0, 0)
 					if err == nil || strings.Contains(err.Error(), "sin datos") {
@@ -781,11 +811,16 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				}
 				mu.Lock()
 				if ok {
-					insertados := totalDBF - totalSQL
-					if insertados < 0 {
-						insertados = 0
+					insertados := 0
+					if totalSQL > totalDBF {
+						insertados = totalDBF
+					} else {
+						insertados = totalDBF - totalSQL
+						if insertados < 0 {
+							insertados = 0
+						}
 					}
-					logInfo("CA: %s %s OK (+%d regs)", store.Codigo, MesesES[m], insertados)
+					logInfo("CA: %s %s OK", store.Codigo, MesesES[m])
 					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, insertados, "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
 				} else {
 					logError("CA: %s %s FALLO: %v", store.Codigo, MesesES[m], lastErr)

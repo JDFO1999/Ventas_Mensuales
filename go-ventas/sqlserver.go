@@ -396,17 +396,23 @@ func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codig
 	return InsertarVentasCA(db, nuevos, codigo)
 }
 
-func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) int {
+func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) (int, error) {
 	var count int
 	tableName := "POS_CA_" + codigo
 	err := db.QueryRow(
 		fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
 		codigo, year, month,
 	).Scan(&count)
-	if err != nil {
-		return 0
-	}
-	return count
+	return count, err
+}
+
+func BorrarDatosTiendaCA(db *sql.DB, codigo string, year, month int) error {
+	tableName := "POS_CA_" + codigo
+	_, err := db.Exec(
+		fmt.Sprintf("DELETE FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
+		codigo, year, month,
+	)
+	return err
 }
 
 func CrearTablaH_Tiendas(db *sql.DB) error {
