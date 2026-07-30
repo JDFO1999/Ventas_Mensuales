@@ -51,6 +51,16 @@ func logError(format string, args ...interface{}) {
 	}
 }
 
+func logWarn(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	line := fmt.Sprintf("[%s] WARN  %s", time.Now().Format("2006-01-02 15:04:05"), msg)
+	if logger != nil {
+		logger.Println(line)
+	} else {
+		fmt.Println(msg)
+	}
+}
+
 func logHistorial(msg string) {
 	histPath := outputDir + "\\go-ventas\\ventas_historial.log"
 	f, err := os.OpenFile(histPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)

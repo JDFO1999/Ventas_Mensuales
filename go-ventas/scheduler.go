@@ -204,28 +204,68 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 	CrearTablaPosVentas(db)
 
 	total := len(sucursales)
-	fmt.Printf("  %d tiendas a procesar\n", total)
+	procesadas := 0
+	saltadas := 0
+	borradas := 0
+	var tasks []tareaTienda
 
-	tasks := make([]tareaTienda, total)
 	for i, s := range sucursales {
-		tasks[i] = tareaTienda{idx: i, suc: s}
+		totalDBF := ContarRegistrosDBF_FA(s, year, month, cfg.Modo)
+		if totalDBF == 0 {
+			fmt.Printf("  %s: sin datos DBF\n", s.Codigo)
+			continue
+		}
+
+		totalSQL, errCnt := ContarFASQL(db, s.Codigo, year, month)
+		if errCnt != nil {
+			fmt.Printf("  %s: ERROR contando SQL: %v\n", s.Codigo, errCnt)
+			continue
+		}
+
+		if totalDBF == totalSQL {
+			fmt.Printf("  %s: SALTADO (%d regs)\n", s.Codigo, totalSQL)
+			saltadas++
+			continue
+		}
+
+		if totalSQL > totalDBF {
+			fmt.Printf("  %s: SQL>DBF (%d>%d), borrando...\n", s.Codigo, totalSQL, totalDBF)
+			if err := BorrarDatosTienda(db, s.Codigo, year, month); err != nil {
+				fmt.Printf("  %s: ERROR borrando: %v\n", s.Codigo, err)
+				continue
+			}
+			borradas++
+		}
+
+		tasks = append(tasks, tareaTienda{idx: i, suc: s})
+		procesadas++
 	}
 
-	procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+	if len(tasks) > 0 {
+		fmt.Printf("  Procesando DBF para %d tiendas...\n", len(tasks))
+		procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+	}
+
+	if procesadas == 0 && saltadas > 0 {
+		fmt.Printf("  Todas las tiendas SALTADAS (%d)\n", saltadas)
+	}
 
 	fmt.Printf("[%s] Leyendo datos completos de SQL...\n", time.Now().Format("15:04:05"))
-	dataSQL, err := LeerDatosDesdeSQL(db, year, month)
+	dataSQL2, err := LeerDatosDesdeSQL(db, year, month)
 	if err != nil {
 		fmt.Printf("ERROR SQL: %v\n", err)
 		return
 	}
 
-	resultados := make([]ResultadoTienda, total)
+	var resultados []ResultadoTienda
 	totalFact := 0
-	for i, s := range sucursales {
+	for _, s := range sucursales {
 		codigo := s.Codigo
 		tiendaLetra := strings.ToUpper(string(codigo[0]))
-		tiendaData := dataSQL[codigo]
+		tiendaData := dataSQL2[codigo]
+		if len(tiendaData) == 0 {
+			continue
+		}
 
 		conteo := make(map[int]int)
 		totalV := 0.0
@@ -242,12 +282,12 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 		hmKey, cm := maxKey(conteo)
 		hmiKey, cmi := minKey(conteo)
 
-		resultados[i] = ResultadoTienda{
+		resultados = append(resultados, ResultadoTienda{
 			Tienda: tiendaLetra, PromedioFactura: promedio,
 			Clientes: clientes, Total: totalV,
 			HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
 			HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
-		}
+		})
 		totalFact += clientes
 	}
 	if totalFact == 0 {

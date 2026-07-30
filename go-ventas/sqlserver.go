@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -12,10 +13,10 @@ import (
 )
 
 const (
-	SQLServer   = "10.10.70.160"
-	SQLDatabase = "Sistemas"
-	SQLUser     = "Sa"
-	SQLPassword = "Alkosto123"
+	SQLServer       = "10.10.10.21"
+	SQLDatabase     = "Sistemas"
+	SQLUser         = "Jose_Sistemas"
+	SQLPassword     = "Zuleidy14*$"
 )
 
 func ConectarSQL() (*sql.DB, error) {
@@ -31,7 +32,7 @@ func ConectarSQL() (*sql.DB, error) {
 }
 
 func ConectarSQL_CA(_ string) (*sql.DB, error) {
-	connStr := fmt.Sprintf("server=%s;database=BD_Tiendas;user id=%s;password=%s;encrypt=disable;connection timeout=10",
+	connStr := fmt.Sprintf("server=%s;database=BD_Tiendas;user id=%s;password=%s;encrypt=disable;connection timeout=30;timeout=180",
 		SQLServer, SQLUser, SQLPassword)
 	db, err := sql.Open("mssql", connStr)
 	if err != nil {
@@ -157,6 +158,13 @@ func CrearTablaPosVentas(db *sql.DB) error {
 			CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
 		)
 	`)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`
+		IF OBJECT_ID('PK_PosVentas','PK') IS NULL
+		ALTER TABLE PosVentas ADD CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
+	`)
 	return err
 }
 
@@ -169,10 +177,23 @@ func TiendaTieneDatos(db *sql.DB, codigo string, year, month int) (bool, error) 
 	return count > 0, err
 }
 
+func ContarFASQL(db *sql.DB, codigo string, year, month int) (int, error) {
+	var count int
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
+	err := db.QueryRow(
+		"SELECT COUNT(*) FROM PosVentas WHERE Tienda=? AND Fecha >= ? AND Fecha < ? AND Tipo='FA'",
+		codigo, startDate, endDate,
+	).Scan(&count)
+	return count, err
+}
+
 func BorrarDatosTienda(db *sql.DB, codigo string, year, month int) error {
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
 	_, err := db.Exec(
-		"DELETE FROM PosVentas WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?",
-		codigo, year, month,
+		"DELETE FROM PosVentas WHERE Tienda=? AND Fecha >= ? AND Fecha < ?",
+		codigo, startDate, endDate,
 	)
 	return err
 }
@@ -310,7 +331,14 @@ func CrearTablaPosVentasCA(db *sql.DB, codigo string) error {
 			FechaCarga DATETIME DEFAULT GETDATE()
 		)
 	`, tableName, tableName))
-	return err
+	if err != nil {
+		return err
+	}
+	db.Exec(fmt.Sprintf(`
+		IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('%s') AND name = 'IX_POS_CA_Fecha')
+		CREATE NONCLUSTERED INDEX IX_POS_CA_Fecha ON %s(Tienda, Fecha)
+	`, tableName, tableName))
+	return nil
 }
 
 func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) error {
@@ -363,11 +391,13 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) er
 
 func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codigo string, year, month int) error {
 	tableName := "POS_CA_" + codigo
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
 
 	existing := make(map[string]bool)
 	rows, err := db.Query(
-		fmt.Sprintf("SELECT Caja, Numero, Tipo, Codigo FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
-		codigo, year, month,
+		fmt.Sprintf("SELECT Caja, Numero, Tipo, Codigo FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+		codigo, startDate, endDate,
 	)
 	if err == nil {
 		for rows.Next() {
@@ -396,23 +426,36 @@ func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codig
 	return InsertarVentasCA(db, nuevos, codigo)
 }
 
-func ContarTiendaMes_SQL(db *sql.DB, codigo string, year, month int) (int, error) {
+func ContarTiendaMes_SQL(ctx context.Context, db *sql.DB, codigo string, year, month int) (int, error) {
 	var count int
 	tableName := "POS_CA_" + codigo
-	err := db.QueryRow(
-		fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
-		codigo, year, month,
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
+	err := db.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+		codigo, startDate, endDate,
 	).Scan(&count)
 	return count, err
 }
 
-func BorrarDatosTiendaCA(db *sql.DB, codigo string, year, month int) error {
+func BorrarDatosTiendaCA(ctx context.Context, db *sql.DB, codigo string, year, month int) error {
 	tableName := "POS_CA_" + codigo
-	_, err := db.Exec(
-		fmt.Sprintf("DELETE FROM %s WHERE Tienda=? AND YEAR(Fecha)=? AND MONTH(Fecha)=?", tableName),
-		codigo, year, month,
-	)
-	return err
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
+	for {
+		result, err := db.ExecContext(ctx,
+			fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+			codigo, startDate, endDate,
+		)
+		if err != nil {
+			return err
+		}
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			break
+		}
+	}
+	return nil
 }
 
 func CrearTablaH_Tiendas(db *sql.DB) error {

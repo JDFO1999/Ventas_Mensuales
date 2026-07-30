@@ -37,7 +37,7 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 		"Cliente promedio por d\u00eda", "Hora con Mayor movimiento",
 		"Clientes atendidos con mayor movimiento", "Hora con menor moviento",
 		"Clientes atendidos con menor movimiento", "Total",
-		"Proemdio venta por d\u00eda (30)",
+		fmt.Sprintf("Promedio venta por d\u00eda (%d)", diasMes),
 	}
 	hdStyle, _ := f.NewStyle(&excelize.Style{
 		Fill:      excelize.Fill{Type: "pattern", Color: []string{"4472C4"}, Pattern: 1},

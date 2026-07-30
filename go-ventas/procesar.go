@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -624,6 +625,53 @@ func ContarRegistrosDBF_Mes(sucursal Sucursal, year, month int, modo string) int
 	return total
 }
 
+func ContarRegistrosDBF_FA(sucursal Sucursal, year, month int, modo string) int {
+	codigo := sucursal.Codigo
+
+	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && sucursal.RutaIP != "" {
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+		} else if modo == "IP" {
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+		}
+	}
+	if err != nil {
+		return 0
+	}
+
+	total := 0
+	for _, dirName := range posDirs {
+		posNum, err := strconv.Atoi(dirName[3:])
+		if err != nil {
+			continue
+		}
+
+		var posPath string
+		if modo == "S" {
+			if sucursal.RutaDBF != "" {
+				posPath = strings.TrimRight(sucursal.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", sucursal.RutaIP, dirName)
+		}
+
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("FC%02d%d.DBF", posNum, year))
+		if _, err := os.Stat(dbfPath); err != nil {
+			continue
+		}
+
+		_, _, _, totalFacturas, _, err := LeerArchivoFC(dbfPath, year, month, codigo, posNum)
+		if err != nil {
+			continue
+		}
+		total += totalFacturas
+	}
+	return total
+}
+
 func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int) error {
 	codigo := sucursal.Codigo
 
@@ -758,7 +806,11 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 					mu.Unlock()
 					continue
 				}
-				totalSQL, errCnt := ContarTiendaMes_SQL(dbCA, store.Codigo, year, m)
+				CrearTablaPosVentasCA(dbCA, store.Codigo)
+
+				ctxCount, cancelCount := context.WithTimeout(context.Background(), 3*time.Minute)
+				totalSQL, errCnt := ContarTiendaMes_SQL(ctxCount, dbCA, store.Codigo, year, m)
+				cancelCount()
 				dbCA.Close()
 
 				if errCnt != nil {
@@ -789,16 +841,55 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 						mu.Unlock()
 						continue
 					}
-					if err := BorrarDatosTiendaCA(dbCA2, store.Codigo, year, m); err != nil {
+
+					ctxDel, cancelDel := context.WithTimeout(context.Background(), 3*time.Minute)
+					err = BorrarDatosTiendaCA(ctxDel, dbCA2, store.Codigo, year, m)
+					cancelDel()
+
+					if err != nil {
 						dbCA2.Close()
 						mu.Lock()
-						logError("CA: %s %s error borrando: %v", store.Codigo, MesesES[m], err)
-						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+						logWarn("CA: %s %s error borrando: %v, verificando si se eliminaron registros...", store.Codigo, MesesES[m], err)
 						mu.Unlock()
-						continue
+
+						dbCA3, errRecon := ConectarSQL_CA(store.Codigo)
+						if errRecon != nil {
+							mu.Lock()
+							logError("CA: %s %s FALLO reconexion verificacion: %v", store.Codigo, MesesES[m], errRecon)
+							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+							mu.Unlock()
+							continue
+						}
+
+						ctxVer, cancelVer := context.WithTimeout(context.Background(), 2*time.Minute)
+						nuevoCount, errCount := ContarTiendaMes_SQL(ctxVer, dbCA3, store.Codigo, year, m)
+						cancelVer()
+						dbCA3.Close()
+
+						if errCount != nil {
+							mu.Lock()
+							logError("CA: %s %s error verificando conteo: %v", store.Codigo, MesesES[m], errCount)
+							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+							mu.Unlock()
+							continue
+						}
+
+						if nuevoCount >= totalSQL {
+							mu.Lock()
+							logError("CA: %s %s el DELETE no se ejecuto (%d registros aun en BD)", store.Codigo, MesesES[m], nuevoCount)
+							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+							mu.Unlock()
+							continue
+						}
+
+						mu.Lock()
+						logWarn("CA: %s %s DELETE si se ejecuto a pesar del timeout (era %d, ahora %d), reinsertando...", store.Codigo, MesesES[m], totalSQL, nuevoCount)
+						mu.Unlock()
+						totalSQL = nuevoCount
+					} else {
+						dbCA2.Close()
+						logInfo("CA: %s %s SQL>DBF (%d>%d), borrado y reinsertando...", store.Codigo, MesesES[m], totalSQL, totalDBF)
 					}
-					dbCA2.Close()
-					logInfo("CA: %s %s SQL>DBF (%d>%d), borrado y reinsertando...", store.Codigo, MesesES[m], totalSQL, totalDBF)
 				}
 
 				for intento := 1; intento <= 3; intento++ {
