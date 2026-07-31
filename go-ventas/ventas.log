@@ -12,3 +12,1227 @@
 [2026-07-17 13:37:03] INFO  CA: MARZO - verificando 19 tiendas
 [2026-07-17 13:37:03] INFO  CA: MAYO - verificando 19 tiendas
 [2026-07-17 13:37:03] INFO  CA: ABRIL - verificando 19 tiendas
+[2026-07-20 10:58:24] INFO  CA: Iniciando 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-20 10:58:24] INFO  CA: JUNIO - verificando 19 tiendas
+[2026-07-20 10:58:24] INFO  CA: MARZO - verificando 19 tiendas
+[2026-07-20 10:58:24] INFO  CA: ENERO - verificando 19 tiendas
+[2026-07-20 10:58:24] INFO  CA: FEBRERO - verificando 19 tiendas
+[2026-07-20 10:58:24] INFO  CA: ABRIL - verificando 19 tiendas
+[2026-07-20 10:58:24] INFO  CA: MAYO - verificando 19 tiendas
+[2026-07-20 12:29:47] INFO  CA: AK01 ABRIL OK
+[2026-07-20 12:30:10] INFO  CA: AK01 JUNIO OK
+[2026-07-20 12:30:44] INFO  CA: AK01 ENERO OK
+[2026-07-20 12:31:30] INFO  CA: AK01 MAYO OK
+[2026-07-20 12:32:59] INFO  CA: AK01 FEBRERO OK
+[2026-07-20 12:32:59] INFO  CA: AK01 MARZO OK
+[2026-07-20 12:48:59] INFO  CA: AK02 ABRIL OK
+[2026-07-20 12:49:41] INFO  CA: AK02 JUNIO OK
+[2026-07-20 12:51:01] INFO  CA: AK02 ENERO OK
+[2026-07-20 12:53:21] INFO  CA: AK02 FEBRERO OK
+[2026-07-20 12:53:36] INFO  CA: AK02 MAYO OK
+[2026-07-20 12:54:45] INFO  CA: AK02 MARZO OK
+[2026-07-20 13:21:23] INFO  CA: AK03 JUNIO OK
+[2026-07-20 13:22:33] INFO  CA: AK03 ABRIL OK
+[2026-07-20 13:24:01] INFO  CA: AK03 ENERO OK
+[2026-07-20 13:24:45] INFO  CA: AK03 FEBRERO OK
+[2026-07-20 13:29:03] INFO  CA: AK03 MAYO OK
+[2026-07-20 13:29:15] INFO  CA: AK03 MARZO OK
+[2026-07-20 13:45:45] INFO  CA: Iniciando 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-20 13:45:45] INFO  CA: JUNIO - verificando 19 tiendas
+[2026-07-20 13:45:45] INFO  CA: MARZO - verificando 19 tiendas
+[2026-07-20 13:45:45] INFO  CA: ENERO - verificando 19 tiendas
+[2026-07-20 13:45:45] INFO  CA: FEBRERO - verificando 19 tiendas
+[2026-07-20 13:45:45] INFO  CA: ABRIL - verificando 19 tiendas
+[2026-07-20 13:45:45] INFO  CA: MAYO - verificando 19 tiendas
+[2026-07-20 13:58:06] INFO  CA: reprocesando completo, 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-20 13:58:06] INFO  CA: JUNIO - verificando 19 tiendas
+[2026-07-20 13:58:06] INFO  CA: MARZO - verificando 19 tiendas
+[2026-07-20 13:58:06] INFO  CA: ENERO - verificando 19 tiendas
+[2026-07-20 13:58:06] INFO  CA: ABRIL - verificando 19 tiendas
+[2026-07-20 13:58:06] INFO  CA: FEBRERO - verificando 19 tiendas
+[2026-07-20 13:58:06] INFO  CA: MAYO - verificando 19 tiendas
+[2026-07-20 14:05:55] INFO  CA: reprocesando completo, 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-20 14:06:06] INFO  CA: HC01 ENERO %!s(MISSING) OK
+[2026-07-20 14:06:10] INFO  CA: HC01 FEBRERO %!s(MISSING) OK
+[2026-07-20 14:06:19] ERROR CA: AK09 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:06:19] INFO  CA: HC01 MARZO %!s(MISSING) OK
+[2026-07-20 14:06:19] ERROR CA: AK08 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:06:23] INFO  CA: HC01 ABRIL %!s(MISSING) OK
+[2026-07-20 14:06:28] INFO  CA: HC01 MAYO %!s(MISSING) OK
+[2026-07-20 14:06:33] INFO  CA: HC01 JUNIO %!s(MISSING) OK
+[2026-07-20 14:06:47] ERROR CA: AK08 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:06:47] ERROR CA: AK09 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:06:48] INFO  CA: VC02 ENERO %!s(MISSING) OK
+[2026-07-20 14:07:03] INFO  CA: VC01 ENERO %!s(MISSING) OK
+[2026-07-20 14:07:06] INFO  CA: HC02 ENERO %!s(MISSING) OK
+[2026-07-20 14:07:12] ERROR CA: AK08 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:07:12] ERROR CA: AK09 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:07:18] INFO  CA: VC02 FEBRERO %!s(MISSING) OK
+[2026-07-20 14:10:35] INFO  CA: reprocesando completo, 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-20 14:10:51] INFO  CA: HC01 ENERO OK
+[2026-07-20 14:10:55] INFO  CA: HC01 FEBRERO OK
+[2026-07-20 14:10:59] ERROR CA: AK08 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:10:59] ERROR CA: AK09 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:11:01] INFO  CA: HC01 MARZO OK
+[2026-07-20 14:11:04] INFO  CA: HC01 ABRIL OK
+[2026-07-20 14:11:09] INFO  CA: HC01 MAYO OK
+[2026-07-20 14:11:12] INFO  CA: HC01 JUNIO OK
+[2026-07-20 14:11:20] INFO  CA: VC02 ENERO OK
+[2026-07-20 14:11:24] ERROR CA: AK08 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:11:24] ERROR CA: AK09 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:11:25] INFO  CA: VC01 ENERO OK
+[2026-07-20 14:11:40] INFO  CA: VC02 FEBRERO OK
+[2026-07-20 14:11:48] INFO  CA: VC02 MARZO OK
+[2026-07-20 14:11:48] INFO  CA: HC02 ENERO OK
+[2026-07-20 14:11:49] INFO  CA: VC02 ABRIL OK
+[2026-07-20 14:11:49] ERROR CA: AK08 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:11:49] ERROR CA: AK09 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:12:08] INFO  CA: VC01 FEBRERO OK
+[2026-07-20 14:12:14] ERROR CA: AK09 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:12:15] ERROR CA: AK08 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:12:37] INFO  CA: HC02 FEBRERO OK
+[2026-07-20 14:12:40] ERROR CA: AK09 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:12:40] ERROR CA: AK08 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:13:05] ERROR CA: AK09 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak09\CIERRE_POS
+[2026-07-20 14:13:05] ERROR CA: AK08 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak08\CIERRE_POS
+[2026-07-20 14:13:37] INFO  CA: HC02 MARZO OK
+[2026-07-20 14:23:47] INFO  CA: VC02 MAYO OK
+[2026-07-20 14:24:09] INFO  CA: HC02 ABRIL OK
+[2026-07-20 14:25:31] INFO  CA: VC01 MARZO OK
+[2026-07-20 14:25:40] INFO  CA: HC02 MAYO OK
+[2026-07-20 14:26:21] INFO  CA: VC02 JUNIO OK
+[2026-07-20 14:26:38] INFO  CA: HC02 JUNIO OK
+[2026-07-20 14:28:29] INFO  CA: VC01 ABRIL OK
+[2026-07-20 14:31:03] INFO  CA: FC05 ENERO OK
+[2026-07-20 14:32:16] INFO  CA: VC01 MAYO OK
+[2026-07-20 14:32:47] INFO  CA: FC04 ENERO OK
+[2026-07-20 14:34:53] INFO  CA: FC02 ENERO OK
+[2026-07-20 14:34:56] INFO  CA: FC01 ENERO OK
+[2026-07-20 14:35:23] INFO  CA: VC01 JUNIO OK
+[2026-07-20 14:39:04] INFO  CA: FC03 ENERO OK
+[2026-07-20 14:39:59] INFO  CA: AK06 ENERO OK
+[2026-07-20 14:40:20] INFO  CA: AK02 ENERO OK
+[2026-07-20 14:40:27] INFO  CA: FC05 FEBRERO OK
+[2026-07-20 14:41:38] INFO  CA: FC06 ENERO OK
+[2026-07-20 14:44:22] INFO  CA: FC04 FEBRERO OK
+[2026-07-20 14:45:19] INFO  CA: AK07 ENERO OK
+[2026-07-20 14:47:22] INFO  CA: FC02 FEBRERO OK
+[2026-07-20 14:48:29] INFO  CA: AK03 ENERO OK
+[2026-07-20 14:48:57] INFO  CA: FC01 FEBRERO OK
+[2026-07-20 14:50:41] INFO  CA: FC05 MARZO OK
+[2026-07-20 14:53:07] INFO  CA: AK04 ENERO OK
+[2026-07-20 14:56:30] INFO  CA: FC04 MARZO OK
+[2026-07-20 14:57:27] INFO  CA: FC03 FEBRERO OK
+[2026-07-20 14:57:41] INFO  CA: AK01 ENERO OK
+[2026-07-20 14:58:18] INFO  CA: AK06 FEBRERO OK
+[2026-07-20 14:59:08] INFO  CA: AK02 FEBRERO OK
+[2026-07-20 14:59:48] INFO  CA: AK07 FEBRERO OK
+[2026-07-20 14:59:48] INFO  CA: FC02 MARZO OK
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] INFO  CA: AK05 ENERO OK
+[2026-07-20 14:59:48] INFO  CA: FC05 ABRIL OK
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] INFO  CA: AK06 MARZO OK
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC05 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 2/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 2/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC05 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 2/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK07 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak07\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC05 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK05 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: FC05 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc05\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: FC02 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC02\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC05 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK06 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak06\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC05 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK07 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak07\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC05 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK05 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: FC02 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC02\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: FC05 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc05\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: AK06 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak06\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK07 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak07\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de FC02 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK05 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: FC02 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC02\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK06 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK07 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK05 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: AK06 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak06\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK07 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak07\CIERRE_POS
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: error borrando datos existentes de AK05 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 14:59:48] ERROR CA: AK05 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-20 15:00:08] INFO  CA: AK04 FEBRERO OK
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: AK04 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak04\CIERRE_POS
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: AK04 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak04\CIERRE_POS
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: AK04 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak04\CIERRE_POS
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: error borrando datos existentes de AK04 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:08] ERROR CA: AK04 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak04\CIERRE_POS
+[2026-07-20 15:00:10] INFO  CA: AK03 FEBRERO OK
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK03 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak03\CIERRE_POS
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK03 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak03\CIERRE_POS
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK03 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak03\CIERRE_POS
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK03 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK03 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak03\CIERRE_POS
+[2026-07-20 15:00:10] INFO  CA: AK01 FEBRERO OK
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK01 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\AK01\CIERRE_POS
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK01 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\AK01\CIERRE_POS
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK01 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\AK01\CIERRE_POS
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: error borrando datos existentes de AK01 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:10] ERROR CA: AK01 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\AK01\CIERRE_POS
+[2026-07-20 15:00:15] INFO  CA: FC01 MARZO OK
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: FC01 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC01\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: FC01 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC01\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] INFO  CA: FC04 ABRIL OK
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC04 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC01 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC04 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: FC01 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC01\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC04 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: FC04 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc04\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC04 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC04 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] INFO  CA: AK02 MARZO OK
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de FC04 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: FC04 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc04\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: AK02 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak02\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: AK02 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak02\CIERRE_POS
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: error borrando datos existentes de AK02 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:15] ERROR CA: AK02 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak02\CIERRE_POS
+[2026-07-20 15:00:21] INFO  CA: FC06 FEBRERO OK
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 3/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: FC06 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc06\CIERRE_POS
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: FC06 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc06\CIERRE_POS
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: FC06 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc06\CIERRE_POS
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: error borrando datos existentes de FC06 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:21] ERROR CA: FC06 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc06\CIERRE_POS
+[2026-07-20 15:00:51] INFO  CA: FC03 MARZO OK
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 4/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: FC03 ABRIL FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc03\CIERRE_POS
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 5/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: FC03 MAYO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc03\CIERRE_POS
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: error borrando datos existentes de FC03 6/2026: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-20 15:00:51] ERROR CA: FC03 JUNIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc03\CIERRE_POS
+[2026-07-20 15:00:51] INFO  CA: Completado en 50.3 min, 56 errores
+[2026-07-20 15:22:56] INFO  CA: Iniciando 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-20 15:23:05] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-20 15:23:05] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-20 15:23:05] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-20 15:23:06] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-20 15:23:06] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-20 15:23:06] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-20 15:23:54] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-20 15:24:52] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-20 15:27:20] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-20 15:28:05] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-20 15:28:18] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-20 15:28:18] INFO  CA: VC02 MAYO OK (71429 regs, saltado)
+[2026-07-20 15:28:59] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-20 15:29:02] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-20 15:29:18] INFO  CA: FC04 ENERO OK (336981 regs, saltado)
+[2026-07-20 15:29:27] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-20 15:29:51] INFO  CA: FC02 ENERO OK (383448 regs, saltado)
+[2026-07-20 15:30:01] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-20 15:30:41] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-20 15:31:03] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-20 15:32:20] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-20 15:33:39] INFO  CA: FC01 ENERO OK (319961 regs, saltado)
+[2026-07-20 15:33:46] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-20 15:33:54] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-20 15:34:15] INFO  CA: FC06 ENERO OK (576671 regs, saltado)
+[2026-07-20 15:34:31] INFO  CA: AK06 ENERO OK (510774 regs, saltado)
+[2026-07-20 15:35:05] INFO  CA: AK02 ENERO OK (525899 regs, saltado)
+[2026-07-20 15:35:28] INFO  CA: FC04 FEBRERO OK (334182 regs, saltado)
+[2026-07-20 15:35:56] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-20 15:36:34] INFO  CA: FC02 FEBRERO OK (360642 regs, saltado)
+[2026-07-20 15:37:58] INFO  CA: AK03 ENERO OK (796424 regs, saltado)
+[2026-07-20 15:38:19] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-20 15:39:27] INFO  CA: AK07 ENERO OK (702530 regs, saltado)
+[2026-07-20 15:40:58] INFO  CA: AK04 ENERO OK (867196 regs, saltado)
+[2026-07-20 15:42:12] INFO  CA: FC04 MARZO OK (373283 regs, saltado)
+[2026-07-20 15:42:56] INFO  CA: FC01 FEBRERO OK (337213 regs, saltado)
+[2026-07-20 15:43:33] INFO  CA: AK01 ENERO OK (1112585 regs, saltado)
+[2026-07-20 15:43:35] INFO  CA: FC06 FEBRERO OK (551268 regs, saltado)
+[2026-07-20 15:44:12] INFO  CA: AK06 FEBRERO OK (497866 regs, saltado)
+[2026-07-20 15:45:24] INFO  CA: AK02 FEBRERO OK (523272 regs, saltado)
+[2026-07-20 15:47:35] INFO  CA: FC05 ABRIL OK (+13751 regs)
+[2026-07-20 15:47:45] INFO  CA: FC03 FEBRERO OK (387858 regs, saltado)
+[2026-07-20 15:50:44] INFO  CA: FC02 MARZO OK (+68826 regs)
+[2026-07-20 15:57:50] INFO  CA: FC04 ABRIL OK (+232608 regs)
+[2026-07-20 16:02:43] INFO  CA: FC05 MAYO OK (+304446 regs)
+[2026-07-20 16:03:13] INFO  CA: FC01 MARZO OK (+127178 regs)
+[2026-07-20 16:10:30] INFO  CA: AK07 FEBRERO OK (+310730 regs)
+[2026-07-20 16:11:05] INFO  CA: FC02 ABRIL OK (+353879 regs)
+[2026-07-20 16:13:35] INFO  CA: FC04 MAYO OK (+341115 regs)
+[2026-07-20 16:14:49] INFO  CA: FC06 MARZO OK (+622468 regs)
+[2026-07-20 16:15:31] INFO  CA: FC05 JUNIO OK (+288760 regs)
+[2026-07-20 16:15:39] INFO  CA: AK03 FEBRERO OK (+494138 regs)
+[2026-07-20 16:15:52] INFO  CA: AK06 MARZO OK (+521549 regs)
+[2026-07-20 16:18:18] INFO  CA: FC03 MARZO OK (+391658 regs)
+[2026-07-20 16:18:33] INFO  CA: AK02 MARZO OK (+591580 regs)
+[2026-07-20 16:20:25] ERROR CA: AK05 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-20 16:24:40] INFO  CA: FC01 ABRIL OK (+330247 regs)
+[2026-07-20 16:27:23] INFO  CA: FC04 JUNIO OK (+310629 regs)
+[2026-07-20 16:27:28] INFO  CA: AK04 FEBRERO OK (+688986 regs)
+[2026-07-20 16:28:48] INFO  CA: FC02 MAYO OK (+362140 regs)
+[2026-07-20 16:39:27] INFO  CA: AK01 FEBRERO OK (+1023222 regs)
+[2026-07-20 16:41:19] INFO  CA: FC06 ABRIL OK (+586596 regs)
+[2026-07-20 16:42:37] INFO  CA: AK06 ABRIL OK (+510035 regs)
+[2026-07-20 16:45:28] INFO  CA: FC02 JUNIO OK (+332667 regs)
+[2026-07-20 16:45:50] INFO  CA: AK02 ABRIL OK (+522731 regs)
+[2026-07-20 16:46:13] INFO  CA: FC03 ABRIL OK (+379787 regs)
+[2026-07-20 16:46:36] INFO  CA: FC01 MAYO OK (+351878 regs)
+[2026-07-20 16:50:39] INFO  CA: AK07 MARZO OK (+915303 regs)
+[2026-07-20 16:55:58] INFO  CA: AK03 MARZO OK (+921962 regs)
+[2026-07-20 17:06:53] INFO  CA: FC06 MAYO OK (+634802 regs)
+[2026-07-20 17:08:25] INFO  CA: FC01 JUNIO OK (+348973 regs)
+[2026-07-20 17:11:00] INFO  CA: AK06 MAYO OK (+559432 regs)
+[2026-07-20 17:12:39] INFO  CA: AK02 MAYO OK (+560093 regs)
+[2026-07-20 17:13:45] INFO  CA: FC03 MAYO OK (+396901 regs)
+[2026-07-20 17:14:24] INFO  CA: AK04 MARZO OK (+996179 regs)
+[2026-07-20 17:24:58] INFO  CA: AK07 ABRIL OK (+846358 regs)
+[2026-07-20 17:28:35] INFO  CA: AK03 ABRIL OK (+815629 regs)
+[2026-07-20 17:29:32] INFO  CA: FC06 JUNIO OK (+581821 regs)
+[2026-07-20 17:30:27] INFO  CA: AK01 MARZO OK (+1213343 regs)
+[2026-07-20 17:36:23] INFO  CA: AK02 JUNIO OK (+517653 regs)
+[2026-07-20 17:39:27] INFO  CA: AK06 JUNIO OK (+545516 regs)
+[2026-07-20 17:40:36] INFO  CA: FC03 JUNIO OK (+386119 regs)
+[2026-07-20 17:56:53] INFO  CA: AK04 ABRIL OK (+909892 regs)
+[2026-07-20 17:57:53] INFO  CA: AK07 MAYO OK (+934178 regs)
+[2026-07-20 18:00:38] INFO  CA: AK03 MAYO OK (+902740 regs)
+[2026-07-20 18:07:05] INFO  CA: AK01 ABRIL OK (+1051467 regs)
+[2026-07-20 18:27:49] INFO  CA: AK07 JUNIO OK (+902972 regs)
+[2026-07-20 18:30:54] INFO  CA: AK03 JUNIO OK (+859398 regs)
+[2026-07-20 18:39:07] INFO  CA: AK04 MAYO OK (+996397 regs)
+[2026-07-20 18:44:18] INFO  CA: AK01 MAYO OK (+1149166 regs)
+[2026-07-20 19:17:51] INFO  CA: AK04 JUNIO OK (+956005 regs)
+[2026-07-20 19:17:53] INFO  CA: AK01 JUNIO OK (+1091400 regs)
+[2026-07-20 19:17:53] INFO  CA: Completado en 234.9 min, 1 errores
+[2026-07-21 08:11:49] INFO  CA: Iniciando 2 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 08:16:46] INFO  CA: AK09 JULIO OK (+280904 regs)
+[2026-07-21 08:16:46] INFO  CA: Completado en 5.0 min, 0 errores
+[2026-07-21 09:16:00] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 09:25:31] INFO  CA: AK08 MARZO OK (+150157 regs)
+[2026-07-21 09:45:19] INFO  CA: AK08 ABRIL OK (+838170 regs)
+[2026-07-21 10:03:32] INFO  CA: AK08 MAYO OK (+781018 regs)
+[2026-07-21 10:26:18] INFO  CA: AK08 JUNIO OK (+718896 regs)
+[2026-07-21 10:40:32] INFO  CA: AK08 JULIO OK (+513294 regs)
+[2026-07-21 10:40:32] INFO  CA: Completado en 84.5 min, 0 errores
+[2026-07-21 10:44:53] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-21 10:45:02] INFO  CA: HC01 JULIO OK (+1614 regs)
+[2026-07-21 10:47:20] INFO  CA: AK09 JULIO OK (280904 regs, saltado)
+[2026-07-21 10:47:37] INFO  CA: HC02 JULIO OK (+14265 regs)
+[2026-07-21 10:49:01] INFO  CA: VC02 JULIO OK (+54667 regs)
+[2026-07-21 10:50:44] INFO  CA: VC01 JULIO OK (+69032 regs)
+[2026-07-21 10:56:30] INFO  CA: AK08 JULIO OK (513294 regs, saltado)
+[2026-07-21 11:02:47] INFO  CA: FC05 JULIO OK (+194607 regs)
+[2026-07-21 11:07:21] INFO  CA: FC04 JULIO OK (+206509 regs)
+[2026-07-21 11:10:25] INFO  CA: FC02 JULIO OK (+229452 regs)
+[2026-07-21 11:16:38] INFO  CA: FC01 JULIO OK (+237440 regs)
+[2026-07-21 11:21:42] INFO  CA: FC03 JULIO OK (+272915 regs)
+[2026-07-21 11:21:43] INFO  CA: FC06 JULIO OK (+404658 regs)
+[2026-07-21 11:22:31] INFO  CA: AK02 JULIO OK (+343061 regs)
+[2026-07-21 11:24:15] INFO  CA: AK06 JULIO OK (+362409 regs)
+[2026-07-21 11:33:46] INFO  CA: AK07 JULIO OK (+606847 regs)
+[2026-07-21 11:34:05] INFO  CA: AK03 JULIO OK (+580135 regs)
+[2026-07-21 11:41:33] INFO  CA: AK04 JULIO OK (+630644 regs)
+[2026-07-21 11:43:19] INFO  CA: AK01 JULIO OK (+711896 regs)
+[2026-07-21 12:06:12] INFO  CA: AK05 JULIO OK (+858192 regs)
+[2026-07-21 12:06:12] INFO  CA: Completado en 81.3 min, 0 errores
+[2026-07-21 12:48:17] INFO  CA: Iniciando 19 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 12:48:26] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-21 12:48:26] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-21 12:48:26] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-21 12:48:27] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-21 12:48:27] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-21 12:48:27] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-21 12:48:27] INFO  CA: HC01 JULIO OK (1614 regs, saltado)
+[2026-07-21 12:49:17] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-21 12:50:25] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-21 12:51:30] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-21 12:52:19] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-21 12:52:28] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-21 12:52:43] ERROR CA: FC02 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC02\CIERRE_POS
+[2026-07-21 12:53:14] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-21 12:53:43] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-21 12:53:55] INFO  CA: VC02 MAYO OK (71429 regs, saltado)
+[2026-07-21 12:53:59] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-21 12:54:43] INFO  CA: HC02 JULIO OK (14265 regs, saltado)
+[2026-07-21 12:54:46] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-21 12:55:00] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-21 12:55:35] INFO  CA: VC02 JULIO OK (54667 regs, saltado)
+[2026-07-21 12:56:16] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-21 12:57:34] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-21 12:58:52] INFO  CA: VC01 JULIO OK (69032 regs, saltado)
+[2026-07-21 12:59:38] INFO  CA: AK06 ENERO OK (510774 regs, saltado)
+[2026-07-21 13:00:22] INFO  CA: AK02 ENERO OK (525899 regs, saltado)
+[2026-07-21 13:02:47] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-21 13:09:13] INFO  CA: AK02 FEBRERO OK (523272 regs, saltado)
+[2026-07-21 13:14:15] INFO  CA: FC03 FEBRERO OK (387858 regs, saltado)
+[2026-07-21 13:16:46] INFO  CA: FC04 ENERO OK (+336981 regs)
+[2026-07-21 13:17:04] INFO  CA: FC06 ENERO OK (576671 regs, saltado)
+[2026-07-21 13:19:28] INFO  CA: AK07 ENERO OK (+702530 regs)
+[2026-07-21 13:20:24] INFO  CA: FC04 FEBRERO OK (334182 regs, saltado)
+[2026-07-21 13:21:27] INFO  CA: FC01 ENERO OK (+319961 regs)
+[2026-07-21 13:21:28] INFO  CA: AK03 ENERO OK (+796424 regs)
+[2026-07-21 13:22:11] INFO  CA: AK06 FEBRERO OK (+497866 regs)
+[2026-07-21 13:23:32] INFO  CA: FC06 FEBRERO OK (551268 regs, saltado)
+[2026-07-21 13:24:01] INFO  CA: FC04 MARZO OK (373283 regs, saltado)
+[2026-07-21 13:28:19] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-21 13:28:24] INFO  CA: FC04 ABRIL OK (333238 regs, saltado)
+[2026-07-21 13:28:34] INFO  CA: AK04 ENERO OK (+867196 regs)
+[2026-07-21 13:29:23] INFO  CA: FC01 FEBRERO OK (337213 regs, saltado)
+[2026-07-21 13:30:51] INFO  CA: AK01 ENERO OK (+1112585 regs)
+[2026-07-21 13:31:09] INFO  CA: AK06 MARZO OK (554212 regs, saltado)
+[2026-07-21 13:31:24] INFO  CA: AK02 MARZO OK (+596580 regs)
+[2026-07-21 13:32:52] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-21 13:33:16] INFO  CA: FC04 MAYO OK (341115 regs, saltado)
+[2026-07-21 13:37:33] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-21 13:38:17] INFO  CA: FC04 JUNIO OK (310629 regs, saltado)
+[2026-07-21 13:41:10] INFO  CA: AK06 ABRIL OK (510035 regs, saltado)
+[2026-07-21 13:41:17] INFO  CA: FC06 MARZO OK (+622468 regs)
+[2026-07-21 13:41:28] INFO  CA: AK02 ABRIL OK (522731 regs, saltado)
+[2026-07-21 13:41:39] INFO  CA: FC05 ABRIL OK (293523 regs, saltado)
+[2026-07-21 13:44:57] INFO  CA: AK04 FEBRERO OK (843999 regs, saltado)
+[2026-07-21 13:46:08] INFO  CA: FC05 MAYO OK (304446 regs, saltado)
+[2026-07-21 13:47:29] INFO  CA: AK07 FEBRERO OK (+2 regs)
+[2026-07-21 13:48:24] INFO  CA: FC01 MARZO OK (+3 regs)
+[2026-07-21 13:48:58] INFO  CA: AK03 FEBRERO OK (+1 regs)
+[2026-07-21 13:49:03] INFO  CA: FC04 JULIO OK (+1725 regs)
+[2026-07-21 13:50:24] INFO  CA: FC05 JUNIO OK (288760 regs, saltado)
+[2026-07-21 13:55:05] INFO  CA: AK05 ENERO OK (+509023 regs)
+[2026-07-21 13:56:06] INFO  CA: FC01 ABRIL OK (330247 regs, saltado)
+[2026-07-21 14:02:10] INFO  CA: FC01 MAYO OK (351878 regs, saltado)
+[2026-07-21 14:30:42] INFO  CA: FC03 MARZO OK (432992 regs, saltado)
+[2026-07-21 14:31:30] INFO  CA: FC05 JULIO OK (+2441 regs)
+[2026-07-21 14:36:49] INFO  CA: FC06 ABRIL OK (+586596 regs)
+[2026-07-21 14:37:11] INFO  CA: FC01 JUNIO OK (348973 regs, saltado)
+[2026-07-21 14:37:14] INFO  CA: AK06 MAYO OK (+559432 regs)
+[2026-07-21 14:42:51] INFO  CA: AK01 FEBRERO OK (+1076397 regs)
+[2026-07-21 14:42:51] INFO  CA: AK02 MAYO OK (+560093 regs)
+[2026-07-21 14:49:36] INFO  CA: AK03 MARZO OK (+921962 regs)
+[2026-07-21 14:50:18] INFO  CA: FC01 JULIO OK (+1269 regs)
+[2026-07-21 14:50:44] INFO  CA: AK04 MARZO OK (+996327 regs)
+[2026-07-21 14:55:18] INFO  CA: AK07 MARZO OK (+915303 regs)
+[2026-07-21 14:57:03] INFO  CA: FC06 MAYO OK (+634802 regs)
+[2026-07-21 14:58:57] INFO  CA: AK02 JUNIO OK (+517653 regs)
+[2026-07-21 15:01:34] INFO  CA: AK06 JUNIO OK (+545516 regs)
+[2026-07-21 15:06:01] INFO  CA: FC03 ABRIL OK (+379787 regs)
+[2026-07-21 15:07:35] INFO  CA: AK03 ABRIL OK (+815629 regs)
+[2026-07-21 15:19:13] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=S
+[2026-07-21 15:19:13] INFO  CA: Completado en 0.0 min, 0 errores
+[2026-07-21 15:22:11] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 15:22:32] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-21 15:22:37] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-21 15:22:41] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-21 15:22:45] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-21 15:22:49] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-21 15:23:01] INFO  CA: VC01 JULIO OK (+1174 regs)
+[2026-07-21 15:23:01] INFO  CA: Completado en 0.8 min, 0 errores
+[2026-07-21 15:23:57] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 15:24:16] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-21 15:24:21] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-21 15:24:25] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-21 15:24:30] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-21 15:24:34] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-21 15:24:37] INFO  CA: VC01 JULIO OK (70206 regs, saltado)
+[2026-07-21 15:24:37] INFO  CA: Completado en 0.7 min, 0 errores
+[2026-07-21 15:25:11] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 15:25:24] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-21 15:25:25] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-21 15:25:27] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-21 15:25:28] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-21 15:25:29] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-21 15:25:31] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-21 15:25:33] INFO  CA: HC02 JULIO OK (+1 regs)
+[2026-07-21 15:25:33] INFO  CA: Completado en 0.4 min, 0 errores
+[2026-07-21 15:27:46] INFO  CA: Iniciando 19 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 15:27:57] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-21 15:27:57] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-21 15:27:58] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-21 15:27:58] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-21 15:27:58] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-21 15:27:58] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-21 15:27:59] INFO  CA: HC01 JULIO OK (+64 regs)
+[2026-07-21 15:28:49] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-21 15:30:26] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 15:30:40] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-21 15:30:43] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-21 15:30:46] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-21 15:30:47] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-21 15:30:48] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-21 15:30:50] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-21 15:30:51] INFO  CA: HC02 JULIO OK (14266 regs, saltado)
+[2026-07-21 15:30:51] INFO  CA: Completado en 0.4 min, 0 errores
+[2026-07-21 15:31:15] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 15:34:44] INFO  CA: FC06 ENERO OK (576671 regs, saltado)
+[2026-07-21 15:38:11] INFO  CA: FC06 FEBRERO OK (551268 regs, saltado)
+[2026-07-21 15:45:48] INFO  CA: FC06 MARZO OK (+0 regs)
+[2026-07-21 15:52:31] INFO  CA: FC06 ABRIL OK (+0 regs)
+[2026-07-21 15:59:06] INFO  CA: FC06 MAYO OK (+0 regs)
+[2026-07-21 16:05:56] INFO  CA: FC06 JUNIO OK (+0 regs)
+[2026-07-21 16:12:40] INFO  CA: FC06 JULIO OK (+6567 regs)
+[2026-07-21 16:12:40] INFO  CA: Completado en 41.4 min, 0 errores
+[2026-07-21 16:21:27] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 16:23:03] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-21 16:24:36] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-21 16:26:07] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-21 16:27:40] INFO  CA: FC05 ABRIL OK (293523 regs, saltado)
+[2026-07-21 16:29:11] INFO  CA: FC05 MAYO OK (304446 regs, saltado)
+[2026-07-21 16:30:44] INFO  CA: FC05 JUNIO OK (288760 regs, saltado)
+[2026-07-21 16:33:57] INFO  CA: FC05 JULIO OK (+0 regs)
+[2026-07-21 16:33:57] INFO  CA: Completado en 12.5 min, 0 errores
+[2026-07-21 16:37:11] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 16:40:46] INFO  CA: FC04 ENERO OK (+0 regs)
+[2026-07-21 16:48:26] INFO  CA: FC04 FEBRERO OK (334182 regs, saltado)
+[2026-07-21 16:59:11] INFO  CA: FC04 MARZO OK (373283 regs, saltado)
+[2026-07-21 17:09:39] INFO  CA: FC04 ABRIL OK (333238 regs, saltado)
+[2026-07-21 17:11:22] INFO  CA: FC04 MAYO OK (341115 regs, saltado)
+[2026-07-21 17:13:06] INFO  CA: FC04 JUNIO OK (310629 regs, saltado)
+[2026-07-21 17:16:45] INFO  CA: FC04 JULIO OK (+1686 regs)
+[2026-07-21 17:16:45] INFO  CA: Completado en 39.6 min, 0 errores
+[2026-07-21 17:24:39] INFO  CA: Iniciando 1 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 17:31:55] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-21 17:39:00] INFO  CA: FC03 FEBRERO OK (387858 regs, saltado)
+[2026-07-21 17:46:42] INFO  CA: FC03 MARZO OK (432992 regs, saltado)
+[2026-07-21 18:00:49] INFO  CA: FC03 ABRIL OK (+0 regs)
+[2026-07-21 18:07:46] INFO  CA: FC03 MAYO OK (396901 regs, saltado)
+[2026-07-21 18:14:39] INFO  CA: FC03 JUNIO OK (386119 regs, saltado)
+[2026-07-21 18:28:48] INFO  CA: FC03 JULIO OK (+4785 regs)
+[2026-07-21 18:28:48] INFO  CA: Completado en 64.2 min, 0 errores
+[2026-07-21 18:39:54] INFO  CA: Iniciando 19 tiendas, meses 1 a 7, modo=IP
+[2026-07-21 18:40:01] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-21 18:40:01] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-21 18:40:02] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-21 18:40:02] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-21 18:40:02] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-21 18:40:03] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-21 18:40:04] INFO  CA: HC01 JULIO OK (+15 regs)
+[2026-07-21 18:40:54] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-21 18:41:55] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-21 18:42:57] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-21 18:43:15] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-21 18:43:54] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-21 18:44:52] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-21 18:44:52] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-21 18:45:38] INFO  CA: VC02 MAYO OK (71429 regs, saltado)
+[2026-07-21 18:45:39] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-21 18:45:50] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-21 18:46:28] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-21 18:46:49] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-21 18:47:26] INFO  CA: FC02 ENERO OK (383448 regs, saltado)
+[2026-07-21 18:47:36] INFO  CA: HC02 JULIO OK (+196 regs)
+[2026-07-21 18:48:01] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-21 18:49:08] INFO  CA: VC02 JULIO OK (+950 regs)
+[2026-07-21 18:49:40] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-21 18:51:12] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-21 18:51:13] INFO  CA: VC01 JULIO OK (70206 regs, saltado)
+[2026-07-21 18:52:16] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-21 18:53:09] INFO  CA: FC04 ENERO OK (+0 regs)
+[2026-07-21 18:54:27] INFO  CA: FC02 FEBRERO OK (360642 regs, saltado)
+[2026-07-21 18:56:12] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-21 18:58:59] INFO  CA: FC04 FEBRERO OK (334182 regs, saltado)
+[2026-07-21 18:59:10] INFO  CA: FC01 ENERO OK (+0 regs)
+[2026-07-21 19:00:44] INFO  CA: FC05 ABRIL OK (293523 regs, saltado)
+[2026-07-21 19:00:50] INFO  CA: FC02 MARZO OK (416258 regs, saltado)
+[2026-07-21 19:03:48] INFO  CA: FC04 MARZO OK (373283 regs, saltado)
+[2026-07-21 19:05:00] INFO  CA: FC06 ENERO OK (+576671 regs)
+[2026-07-21 19:05:19] INFO  CA: AK06 ENERO OK (+510774 regs)
+[2026-07-21 19:07:37] INFO  CA: AK02 ENERO OK (+525899 regs)
+[2026-07-21 19:13:38] INFO  CA: AK07 ENERO OK (+702530 regs)
+[2026-07-21 19:13:57] INFO  CA: FC05 MAYO OK (+304446 regs)
+[2026-07-21 19:14:30] INFO  CA: AK02 FEBRERO OK (523272 regs, saltado)
+[2026-07-21 19:16:31] INFO  CA: FC04 ABRIL OK (+333238 regs)
+[2026-07-21 19:16:55] INFO  CA: FC05 JUNIO OK (288760 regs, saltado)
+[2026-07-21 19:17:00] INFO  CA: AK03 ENERO OK (+796424 regs)
+[2026-07-21 19:18:51] INFO  CA: AK04 ENERO OK (+0 regs)
+[2026-07-21 19:19:06] INFO  CA: FC01 FEBRERO OK (+337213 regs)
+[2026-07-21 19:19:33] INFO  CA: FC02 ABRIL OK (+353879 regs)
+[2026-07-21 19:21:51] INFO  CA: FC04 MAYO OK (341115 regs, saltado)
+[2026-07-21 19:21:58] INFO  CA: FC03 FEBRERO OK (+387858 regs)
+[2026-07-21 19:25:50] INFO  CA: FC05 JULIO OK (+0 regs)
+[2026-07-21 19:26:11] INFO  CA: AK06 FEBRERO OK (+497866 regs)
+[2026-07-21 19:29:07] INFO  CA: FC06 FEBRERO OK (+551268 regs)
+[2026-07-21 19:30:23] INFO  CA: AK01 ENERO OK (+1112585 regs)
+[2026-07-21 19:32:15] INFO  CA: FC03 MARZO OK (432992 regs, saltado)
+[2026-07-21 19:34:58] INFO  CA: FC04 JUNIO OK (+310629 regs)
+[2026-07-21 19:37:28] INFO  CA: FC01 MARZO OK (+0 regs)
+[2026-07-21 19:37:36] INFO  CA: AK02 MARZO OK (+596580 regs)
+[2026-07-21 19:39:36] INFO  CA: FC02 MAYO OK (+362140 regs)
+[2026-07-21 19:43:34] INFO  CA: FC04 JULIO OK (+1019 regs)
+[2026-07-21 19:44:18] INFO  CA: FC02 JUNIO OK (332667 regs, saltado)
+[2026-07-21 19:47:55] INFO  CA: AK06 MARZO OK (+554212 regs)
+[2026-07-21 19:51:33] INFO  CA: FC06 MARZO OK (+622468 regs)
+[2026-07-21 19:52:03] INFO  CA: FC01 ABRIL OK (+330247 regs)
+[2026-07-21 19:52:27] INFO  CA: AK03 FEBRERO OK (+789055 regs)
+[2026-07-21 19:55:39] INFO  CA: AK02 ABRIL OK (+522731 regs)
+[2026-07-21 19:59:39] INFO  CA: FC03 ABRIL OK (+379787 regs)
+[2026-07-21 19:59:52] INFO  CA: FC02 JULIO OK (+4497 regs)
+[2026-07-21 19:59:54] INFO  CA: AK04 FEBRERO OK (+843999 regs)
+[2026-07-21 20:02:53] INFO  CA: AK05 ENERO OK (+0 regs)
+[2026-07-21 20:07:41] INFO  CA: FC03 MAYO OK (396901 regs, saltado)
+[2026-07-21 20:08:47] INFO  CA: AK07 FEBRERO OK (+731033 regs)
+[2026-07-21 20:09:07] INFO  CA: AK06 ABRIL OK (+510035 regs)
+[2026-07-21 20:09:46] INFO  CA: AK01 FEBRERO OK (+1076397 regs)
+[2026-07-21 20:11:59] INFO  CA: FC01 MAYO OK (+351878 regs)
+[2026-07-21 20:18:17] INFO  CA: FC01 JUNIO OK (348973 regs, saltado)
+[2026-07-21 20:18:38] INFO  CA: FC06 ABRIL OK (+586596 regs)
+[2026-07-21 20:19:02] INFO  CA: AK02 MAYO OK (+0 regs)
+[2026-07-21 20:21:39] INFO  CA: AK03 MARZO OK (+921962 regs)
+[2026-07-21 20:26:05] ERROR CA: FC01 JULIO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC01\CIERRE_POS
+[2026-07-21 20:28:14] INFO  CA: AK04 MARZO OK (+996327 regs)
+[2026-07-21 20:29:59] INFO  CA: AK06 MAYO OK (+559432 regs)
+[2026-07-21 20:30:29] INFO  CA: FC03 JUNIO OK (+386119 regs)
+[2026-07-21 20:30:32] INFO  CA: AK07 MARZO OK (+915303 regs)
+[2026-07-21 20:36:09] INFO  CA: FC06 MAYO OK (+0 regs)
+[2026-07-21 20:36:46] INFO  CA: AK02 JUNIO OK (+517653 regs)
+[2026-07-21 20:39:37] INFO  CA: AK03 ABRIL OK (+815629 regs)
+[2026-07-21 20:47:42] INFO  CA: AK07 ABRIL OK (+846358 regs)
+[2026-07-21 20:49:26] INFO  CA: AK02 JULIO OK (+0 regs)
+[2026-07-21 20:51:15] INFO  CA: FC03 JULIO OK (+0 regs)
+[2026-07-21 20:53:08] INFO  CA: FC06 JUNIO OK (+581821 regs)
+[2026-07-21 20:53:56] INFO  CA: AK06 JUNIO OK (+545516 regs)
+[2026-07-21 21:05:09] INFO  CA: AK04 ABRIL OK (+910147 regs)
+[2026-07-21 21:05:39] INFO  CA: AK07 MAYO OK (+934178 regs)
+[2026-07-21 21:10:12] INFO  CA: FC06 JULIO OK (+411902 regs)
+[2026-07-21 21:11:02] INFO  CA: AK07 JUNIO OK (902972 regs, saltado)
+[2026-07-21 21:14:17] INFO  CA: AK01 MARZO OK (+1213343 regs)
+[2026-07-21 21:16:58] INFO  CA: AK03 MAYO OK (+902740 regs)
+[2026-07-21 21:17:23] INFO  CA: AK06 JULIO OK (+369292 regs)
+[2026-07-21 21:25:16] INFO  CA: AK07 JULIO OK (+621129 regs)
+[2026-07-21 21:32:10] INFO  CA: AK03 JUNIO OK (+859398 regs)
+[2026-07-21 21:33:05] INFO  CA: AK04 MAYO OK (+996603 regs)
+[2026-07-21 21:36:51] INFO  CA: AK01 ABRIL OK (+1051467 regs)
+[2026-07-21 21:44:18] INFO  CA: AK03 JULIO OK (+14972 regs)
+[2026-07-21 21:51:37] INFO  CA: AK05 FEBRERO OK (+451606 regs)
+[2026-07-21 21:53:39] INFO  CA: AK01 MAYO OK (+1149166 regs)
+[2026-07-21 21:57:08] INFO  CA: AK04 JUNIO OK (+956276 regs)
+[2026-07-21 22:00:06] INFO  CA: AK01 JUNIO OK (1091400 regs, saltado)
+[2026-07-21 22:16:35] INFO  CA: AK01 JULIO OK (+30113 regs)
+[2026-07-21 22:18:36] INFO  CA: AK04 JULIO OK (+11865 regs)
+[2026-07-21 23:49:44] INFO  CA: AK05 MARZO OK (+1335479 regs)
+[2026-07-22 01:29:47] INFO  CA: AK05 ABRIL OK (+1247922 regs)
+[2026-07-22 03:11:21] INFO  CA: AK05 MAYO OK (+1393688 regs)
+[2026-07-22 04:59:36] INFO  CA: AK05 JUNIO OK (+1197980 regs)
+[2026-07-22 06:29:56] INFO  CA: AK05 JULIO OK (+35810 regs)
+[2026-07-22 06:29:56] INFO  CA: Completado en 710.0 min, 1 errores
+[2026-07-22 10:02:59] INFO  CA: Iniciando 19 tiendas, meses 1 a 1, modo=IP
+[2026-07-22 10:03:08] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-22 10:04:00] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-22 10:08:45] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-22 10:10:22] INFO  CA: FC02 ENERO OK (383448 regs, saltado)
+[2026-07-22 10:15:38] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-22 10:16:43] INFO  CA: FC04 ENERO OK (+0 regs)
+[2026-07-22 18:10:25] INFO  CA: Iniciando 19 tiendas, meses 1 a 7, modo=IP
+[2026-07-22 18:10:30] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-22 18:10:31] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-22 18:10:31] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-22 18:10:32] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-22 18:10:32] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-22 18:10:32] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-22 18:10:33] INFO  CA: HC01 JULIO OK (+108 regs)
+[2026-07-22 18:11:24] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-22 18:12:35] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-22 18:13:43] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-22 18:14:21] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-22 18:14:47] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-22 18:15:45] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-22 18:16:09] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-22 18:16:45] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-22 18:16:48] INFO  CA: VC02 MAYO OK (71429 regs, saltado)
+[2026-07-22 18:17:12] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-22 18:17:58] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-22 18:17:58] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-22 18:18:46] INFO  CA: HC02 JULIO OK (+566 regs)
+[2026-07-22 18:19:36] INFO  CA: FC02 ENERO OK (383448 regs, saltado)
+[2026-07-22 18:19:43] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-22 18:20:31] INFO  CA: VC02 JULIO OK (+2957 regs)
+[2026-07-22 18:21:35] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-22 18:23:55] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-22 18:24:39] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-22 18:25:23] INFO  CA: VC01 JULIO OK (+3019 regs)
+[2026-07-22 18:26:43] INFO  CA: FC04 ENERO OK (+0 regs)
+[2026-07-22 18:29:31] INFO  CA: AK09 JULIO OK (+32405 regs)
+[2026-07-22 18:29:49] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-22 18:32:59] INFO  CA: FC04 FEBRERO OK (334182 regs, saltado)
+[2026-07-22 18:35:22] INFO  CA: FC02 FEBRERO OK (+360642 regs)
+[2026-07-22 18:35:40] INFO  CA: AK02 ENERO OK (+0 regs)
+[2026-07-22 18:36:48] INFO  CA: AK06 ENERO OK (+510774 regs)
+[2026-07-22 18:38:22] INFO  CA: FC04 MARZO OK (373283 regs, saltado)
+[2026-07-22 18:38:27] INFO  CA: FC06 ENERO OK (+0 regs)
+[2026-07-22 18:39:37] INFO  CA: FC05 ABRIL OK (+293523 regs)
+[2026-07-22 18:39:57] INFO  CA: AK07 ENERO OK (+0 regs)
+[2026-07-22 18:40:05] INFO  CA: AK08 MARZO OK (+150157 regs)
+[2026-07-22 18:40:06] INFO  CA: AK04 ENERO OK (+867196 regs)
+[2026-07-22 18:40:14] ERROR CA: AK02 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak02\CIERRE_POS
+[2026-07-22 18:40:27] INFO  CA: AK01 ENERO OK (+1112585 regs)
+[2026-07-22 18:40:55] INFO  CA: AK03 ENERO OK (+796424 regs)
+[2026-07-22 18:40:56] ERROR CA: FC06 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Fc06\CIERRE_POS
+[2026-07-22 18:41:03] ERROR CA: FC02 MARZO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\FC02\CIERRE_POS
+[2026-07-22 18:41:05] INFO  CA: FC01 ENERO OK (+0 regs)
+[2026-07-22 18:41:20] ERROR CA: AK06 FEBRERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak06\CIERRE_POS
+[2026-07-22 18:41:24] INFO  CA: FC03 FEBRERO OK (+387858 regs)
+[2026-07-22 18:41:35] ERROR CA: AK05 ENERO FALLO: FALLO ruta: Ruta no accesible: S:\aBC-Soft\Data\Ak05\CIERRE_POS
+[2026-07-22 18:41:35] INFO  CA: Completado en 31.2 min, 5 errores
+[2026-07-23 11:14:48] INFO  CA: Iniciando 19 tiendas, meses 1 a 7, modo=IP
+[2026-07-23 11:15:18] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-23 11:15:23] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-23 11:15:23] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-23 11:15:24] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-23 11:15:24] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-23 11:15:25] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-23 11:15:26] INFO  CA: HC01 JULIO OK (+0 regs)
+[2026-07-23 11:18:46] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-23 11:19:46] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-23 11:20:50] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-23 11:21:41] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-23 11:22:00] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-23 11:23:10] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-23 11:23:49] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-23 11:24:16] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-23 11:24:23] INFO  CA: VC02 MAYO OK (71429 regs, saltado)
+[2026-07-23 11:25:03] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-23 11:25:53] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-23 11:26:02] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-23 11:26:29] INFO  CA: HC02 JULIO OK (+261 regs)
+[2026-07-23 11:27:10] INFO  CA: FC02 ENERO OK (383448 regs, saltado)
+[2026-07-23 11:27:47] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-23 11:28:40] INFO  CA: VC02 JULIO OK (+1955 regs)
+[2026-07-23 11:29:53] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-23 11:32:30] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-23 11:33:43] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-23 11:34:17] INFO  CA: VC01 JULIO OK (+3301 regs)
+[2026-07-23 11:36:07] INFO  CA: FC04 ENERO OK (+336981 regs)
+[2026-07-23 11:38:40] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-23 11:40:33] INFO  CA: AK09 JULIO OK (+13928 regs)
+[2026-07-23 11:42:50] INFO  CA: FC01 ENERO OK (+0 regs)
+[2026-07-23 11:45:46] INFO  CA: FC02 FEBRERO OK (+0 regs)
+[2026-07-23 11:47:19] INFO  CA: AK06 ENERO OK (+0 regs)
+[2026-07-23 12:00:53] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 12:13:48] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 12:26:41] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 12:35:28] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 13:29:44] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 13:33:05] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:31:04] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:38:06] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:38:20] INFO  CA: VC02 JULIO OK (60529 regs, saltado)
+[2026-07-23 14:38:20] INFO  CA: Completado en 0.2 min, 0 errores
+[2026-07-23 14:39:34] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:40:01] INFO  CA: VC01 JULIO OK (+1643 regs)
+[2026-07-23 14:40:01] INFO  CA: Completado en 0.5 min, 0 errores
+[2026-07-23 14:40:24] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:42:51] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:43:07] INFO  CA: HC02 JULIO OK (+0 regs)
+[2026-07-23 14:43:07] INFO  CA: Completado en 0.3 min, 0 errores
+[2026-07-23 14:43:26] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 14:43:28] INFO  CA: HC01 JULIO OK (+18 regs)
+[2026-07-23 14:43:28] INFO  CA: Completado en 0.0 min, 0 errores
+[2026-07-23 14:43:52] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 15:09:03] INFO  CA: FC06 JULIO OK (+452946 regs)
+[2026-07-23 15:09:03] INFO  CA: Completado en 25.2 min, 0 errores
+[2026-07-23 15:14:34] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 15:17:48] INFO  CA: FC05 JULIO OK (+0 regs)
+[2026-07-23 15:17:48] INFO  CA: Completado en 3.2 min, 0 errores
+[2026-07-23 15:23:24] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 15:27:43] INFO  CA: FC04 JULIO OK (+22650 regs)
+[2026-07-23 15:27:43] INFO  CA: Completado en 4.3 min, 0 errores
+[2026-07-23 15:28:29] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 16:17:09] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 16:18:20] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 16:23:09] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 16:24:33] INFO  CA: Iniciando 1 tiendas, meses 6 a 6, modo=IP
+[2026-07-23 16:24:46] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-23 16:24:46] INFO  CA: Completado en 0.2 min, 0 errores
+[2026-07-23 16:25:48] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 16:32:35] INFO  CA: FC06 JULIO OK (+0 regs)
+[2026-07-23 16:32:35] INFO  CA: Completado en 6.8 min, 0 errores
+[2026-07-23 16:36:09] INFO  CA: Iniciando 1 tiendas, meses 7 a 7, modo=IP
+[2026-07-23 16:39:25] INFO  CA: FC05 JULIO OK (+0 regs)
+[2026-07-23 16:39:25] INFO  CA: Completado en 3.3 min, 0 errores
+[2026-07-23 18:09:27] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 10:28:24] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 10:28:46] INFO  CA: AK01 JULIO sin datos DBF
+[2026-07-27 10:39:34] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 10:39:56] INFO  CA: AK01 JULIO sin datos DBF
+[2026-07-27 10:54:50] INFO  CA: AK02 JULIO OK (+70458 regs)
+[2026-07-27 10:58:20] INFO  CA: AK06 JULIO OK (+470073 regs)
+[2026-07-27 11:03:26] INFO  CA: AK07 JULIO OK (+784713 regs)
+[2026-07-27 11:03:49] INFO  CA: AK09 JULIO OK (+109696 regs)
+[2026-07-27 11:05:49] INFO  CA: AK08 JULIO OK (+150613 regs)
+[2026-07-27 11:07:49] INFO  CA: AK03 JULIO OK (+748209 regs)
+[2026-07-27 11:13:37] INFO  CA: FC02 JULIO OK (+0 regs)
+[2026-07-27 11:13:53] INFO  CA: FC04 JULIO OK (+39732 regs)
+[2026-07-27 11:18:18] INFO  CA: AK04 JULIO OK (+814045 regs)
+[2026-07-27 11:18:21] INFO  CA: HC01 JULIO OK (+308 regs)
+[2026-07-27 11:18:53] INFO  CA: FC05 JULIO OK (+11394 regs)
+[2026-07-27 11:18:54] INFO  CA: AK05 JULIO OK (+1114431 regs)
+[2026-07-27 11:19:06] INFO  CA: HC02 JULIO OK (+2212 regs)
+[2026-07-27 11:19:38] INFO  CA: FC01 JULIO OK (+78226 regs)
+[2026-07-27 11:19:47] INFO  CA: VC02 JULIO OK (+10748 regs)
+[2026-07-27 11:19:56] INFO  CA: VC01 JULIO OK (+13889 regs)
+[2026-07-27 11:23:41] INFO  CA: FC06 JULIO OK (+0 regs)
+[2026-07-27 11:24:43] INFO  CA: FC03 JULIO OK (+39589 regs)
+[2026-07-27 11:24:43] INFO  CA: Completado en 45.1 min, 0 errores
+[2026-07-27 11:46:01] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 12:02:19] INFO  CA: AK02 JULIO OK (+0 regs)
+[2026-07-27 12:04:49] INFO  CA: AK06 JULIO OK (+0 regs)
+[2026-07-27 12:12:50] INFO  CA: AK08 JULIO OK (+663907 regs)
+[2026-07-27 12:13:48] INFO  CA: AK09 JULIO OK (+0 regs)
+[2026-07-27 12:16:47] INFO  CA: AK01 JULIO OK (+935771 regs)
+[2026-07-27 12:20:47] INFO  CA: AK03 JULIO OK (+748209 regs)
+[2026-07-27 12:24:33] INFO  CA: FC01 JULIO OK (+0 regs)
+[2026-07-27 12:24:46] INFO  CA: FC02 JULIO OK (+0 regs)
+[2026-07-27 12:26:41] INFO  CA: AK05 JULIO OK (+1114431 regs)
+[2026-07-27 12:29:12] INFO  CA: FC04 JULIO OK (+477 regs)
+[2026-07-27 12:29:22] INFO  CA: HC01 JULIO OK (+0 regs)
+[2026-07-27 12:29:24] INFO  CA: FC05 JULIO OK (+0 regs)
+[2026-07-27 12:29:40] INFO  CA: HC02 JULIO OK (+0 regs)
+[2026-07-27 12:29:45] INFO  CA: VC01 JULIO OK (92058 regs, saltado)
+[2026-07-27 12:29:46] INFO  CA: AK07 JULIO OK (+784713 regs)
+[2026-07-27 12:29:55] INFO  CA: VC02 JULIO OK (71277 regs, saltado)
+[2026-07-27 12:35:18] INFO  CA: AK04 JULIO OK (+814045 regs)
+[2026-07-27 12:38:37] INFO  CA: FC03 JULIO OK (+0 regs)
+[2026-07-27 12:38:39] INFO  CA: FC06 JULIO OK (+528678 regs)
+[2026-07-27 12:38:39] INFO  CA: Completado en 52.6 min, 0 errores
+[2026-07-27 13:16:27] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 13:23:09] ERROR CA: AK06 JULIO error borrando: read tcp 10.10.70.9:58847->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:24:06] ERROR CA: AK02 JULIO error borrando: read tcp 10.10.70.9:58934->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:24:54] ERROR CA: AK03 JULIO error contando SQL: read tcp 10.10.70.9:59009->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:27:47] ERROR CA: AK09 JULIO error borrando: read tcp 10.10.70.9:59357->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:28:24] ERROR CA: AK01 JULIO error contando SQL: read tcp 10.10.70.9:59417->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:32:24] ERROR CA: AK04 JULIO error contando SQL: read tcp 10.10.70.9:59776->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:35:50] ERROR CA: AK07 JULIO error contando SQL: read tcp 10.10.70.9:60078->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:36:04] ERROR CA: FC02 JULIO error borrando: read tcp 10.10.70.9:60103->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:36:28] ERROR CA: AK05 JULIO error contando SQL: read tcp 10.10.70.9:60142->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:37:57] ERROR CA: FC01 JULIO error borrando: read tcp 10.10.70.9:60273->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:37:59] INFO  CA: AK08 JULIO OK
+[2026-07-27 13:37:59] INFO  CA: HC01 JULIO SQL>DBF (2284>2244), borrado y reinsertando...
+[2026-07-27 13:38:03] INFO  CA: HC01 JULIO OK
+[2026-07-27 13:38:24] INFO  CA: HC02 JULIO SQL>DBF (17705>17637), borrado y reinsertando...
+[2026-07-27 13:38:45] INFO  CA: VC01 JULIO OK (92058 regs, saltado)
+[2026-07-27 13:38:55] ERROR CA: FC05 JULIO error borrando: read tcp 10.10.70.9:60388->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:39:01] INFO  CA: VC02 JULIO OK (71277 regs, saltado)
+[2026-07-27 13:39:14] INFO  CA: HC02 JULIO OK
+[2026-07-27 13:41:20] ERROR CA: FC06 JULIO error contando SQL: read tcp 10.10.70.9:60623->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:41:37] INFO  CA: FC04 JULIO OK
+[2026-07-27 13:42:06] ERROR CA: FC03 JULIO error contando SQL: read tcp 10.10.70.9:60697->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:42:07] INFO  CA: Completado en 25.7 min, 0 errores
+[2026-07-27 13:45:08] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 13:51:10] INFO  CA: AK02 JULIO SQL>DBF (513906>453791), borrado y reinsertando...
+[2026-07-27 13:51:50] INFO  CA: AK06 JULIO SQL>DBF (658403>470073), borrado y reinsertando...
+[2026-07-27 13:53:39] WARN  CA: AK03 JULIO error borrando: read tcp 10.10.70.9:61740->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 13:54:03] ERROR CA: AK03 JULIO el DELETE no se ejecuto (1271820 registros aun en BD)
+[2026-07-27 13:55:01] WARN  CA: AK01 JULIO error borrando: read tcp 10.10.70.9:61865->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 13:55:29] ERROR CA: AK01 JULIO el DELETE no se ejecuto (955531 registros aun en BD)
+[2026-07-27 13:55:36] INFO  CA: AK08 JULIO sin datos DBF
+[2026-07-27 13:55:42] INFO  CA: AK09 JULIO sin datos DBF
+[2026-07-27 13:56:34] WARN  CA: AK04 JULIO error borrando: read tcp 10.10.70.9:62018->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 13:57:04] ERROR CA: AK04 JULIO error verificando conteo: read tcp 10.10.70.9:62068->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:59:09] WARN  CA: AK05 JULIO error borrando: read tcp 10.10.70.9:62279->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 13:59:39] ERROR CA: AK05 JULIO error verificando conteo: read tcp 10.10.70.9:62327->10.10.70.160:1433: i/o timeout
+[2026-07-27 13:59:43] WARN  CA: AK07 JULIO error borrando: read tcp 10.10.70.9:62339->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 14:00:11] ERROR CA: AK07 JULIO el DELETE no se ejecuto (1120617 registros aun en BD)
+[2026-07-27 14:01:38] INFO  CA: FC02 JULIO SQL>DBF (376704>306174), borrado y reinsertando...
+[2026-07-27 14:01:46] INFO  CA: FC01 JULIO SQL>DBF (326235>318245), borrado y reinsertando...
+[2026-07-27 14:07:29] INFO  CA: FC03 JULIO SQL>DBF (423443>354722), borrado y reinsertando...
+[2026-07-27 14:17:29] INFO  CA: FC04 JULIO OK
+[2026-07-27 14:19:54] INFO  CA: FC05 JULIO SQL>DBF (280145>258846), borrado y reinsertando...
+[2026-07-27 14:21:56] INFO  CA: AK02 JULIO OK
+[2026-07-27 14:23:42] INFO  CA: AK06 JULIO OK
+[2026-07-27 14:23:44] INFO  CA: HC01 JULIO OK (2244 regs, saltado)
+[2026-07-27 14:24:04] INFO  CA: HC02 JULIO OK (17637 regs, saltado)
+[2026-07-27 14:25:03] INFO  CA: VC01 JULIO OK
+[2026-07-27 14:25:17] INFO  CA: VC02 JULIO OK (71277 regs, saltado)
+[2026-07-27 14:26:05] WARN  CA: FC06 JULIO error borrando: read tcp 10.10.70.9:64947->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 14:26:19] ERROR CA: FC06 JULIO el DELETE no se ejecuto (760099 registros aun en BD)
+[2026-07-27 14:26:52] INFO  CA: FC02 JULIO OK
+[2026-07-27 14:27:59] INFO  CA: FC05 JULIO OK
+[2026-07-27 14:28:09] INFO  CA: FC01 JULIO OK
+[2026-07-27 14:32:29] INFO  CA: FC03 JULIO OK
+[2026-07-27 14:32:29] INFO  CA: Completado en 47.3 min, 0 errores
+[2026-07-27 14:49:36] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 14:58:07] WARN  CA: AK03 JULIO error borrando: read tcp 10.10.70.9:51673->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 14:58:26] ERROR CA: AK03 JULIO el DELETE no se ejecuto (1271820 registros aun en BD)
+[2026-07-27 15:00:18] ERROR CA: AK04 JULIO error contando SQL: read tcp 10.10.70.9:51877->10.10.70.160:1433: i/o timeout
+[2026-07-27 15:00:25] INFO  CA: AK08 JULIO sin datos DBF
+[2026-07-27 15:00:31] WARN  CA: AK01 JULIO error borrando: read tcp 10.10.70.9:51896->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 15:00:31] INFO  CA: AK09 JULIO sin datos DBF
+[2026-07-27 15:00:56] ERROR CA: AK01 JULIO el DELETE no se ejecuto (955531 registros aun en BD)
+[2026-07-27 15:03:08] INFO  CA: AK02 JULIO OK
+[2026-07-27 15:03:38] INFO  CA: AK06 JULIO OK
+[2026-07-27 15:04:30] WARN  CA: AK05 JULIO error borrando: read tcp 10.10.70.9:52282->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 15:05:00] ERROR CA: AK05 JULIO error verificando conteo: read tcp 10.10.70.9:52329->10.10.70.160:1433: i/o timeout
+[2026-07-27 15:05:07] WARN  CA: AK07 JULIO error borrando: read tcp 10.10.70.9:52341->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 15:05:35] ERROR CA: AK07 JULIO el DELETE no se ejecuto (1120617 registros aun en BD)
+[2026-07-27 15:07:08] INFO  CA: FC05 JULIO OK (259162 regs, saltado)
+[2026-07-27 15:07:16] INFO  CA: HC01 JULIO OK
+[2026-07-27 15:08:04] INFO  CA: HC02 JULIO OK
+[2026-07-27 15:08:30] INFO  CA: FC02 JULIO OK
+[2026-07-27 15:08:32] INFO  CA: FC04 JULIO OK
+[2026-07-27 15:08:35] INFO  CA: VC01 JULIO OK (93332 regs, saltado)
+[2026-07-27 15:08:48] INFO  CA: VC02 JULIO OK (71277 regs, saltado)
+[2026-07-27 15:10:03] INFO  CA: FC06 JULIO SQL>DBF (760099>533986), borrado y reinsertando...
+[2026-07-27 15:12:24] INFO  CA: FC01 JULIO OK
+[2026-07-27 15:22:38] INFO  CA: FC06 JULIO OK
+[2026-07-27 15:34:32] INFO  CA: FC03 JULIO OK
+[2026-07-27 15:34:32] INFO  CA: Completado en 44.9 min, 0 errores
+[2026-07-27 15:42:58] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 15:52:37] INFO  CA: AK03 JULIO SQL>DBF (1271820>753722), borrado y reinsertando...
+[2026-07-27 15:55:15] WARN  CA: AK01 JULIO error borrando: read tcp 10.10.70.9:56989->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 16:02:15] WARN  CA: AK04 JULIO error borrando: read tcp 10.10.70.9:57042->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 16:02:15] WARN  CA: AK05 JULIO error borrando: read tcp 10.10.70.9:57437->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 16:02:22] ERROR CA: AK05 JULIO el DELETE no se ejecuto (1295485 registros aun en BD)
+[2026-07-27 16:02:23] ERROR CA: AK01 JULIO el DELETE no se ejecuto (955531 registros aun en BD)
+[2026-07-27 16:02:23] ERROR CA: AK04 JULIO el DELETE no se ejecuto (1542771 registros aun en BD)
+[2026-07-27 16:02:29] INFO  CA: AK08 JULIO sin datos DBF
+[2026-07-27 16:02:30] INFO  CA: AK09 JULIO sin datos DBF
+[2026-07-27 16:08:33] INFO  CA: AK07 JULIO SQL>DBF (1120617>791468), borrado y reinsertando...
+[2026-07-27 16:22:39] INFO  CA: AK02 JULIO OK
+[2026-07-27 16:23:10] INFO  CA: FC02 JULIO OK
+[2026-07-27 16:24:28] INFO  CA: FC01 JULIO OK
+[2026-07-27 16:24:57] INFO  CA: AK06 JULIO OK
+[2026-07-27 16:26:17] INFO  CA: FC05 JULIO OK (259162 regs, saltado)
+[2026-07-27 16:26:19] INFO  CA: HC01 JULIO OK
+[2026-07-27 16:26:41] INFO  CA: HC02 JULIO OK (17653 regs, saltado)
+[2026-07-27 16:27:07] INFO  CA: VC01 JULIO OK (93332 regs, saltado)
+[2026-07-27 16:27:39] INFO  CA: VC02 JULIO OK
+[2026-07-27 16:28:20] INFO  CA: FC04 JULIO OK
+[2026-07-27 16:28:55] INFO  CA: FC06 JULIO OK (533986 regs, saltado)
+[2026-07-27 16:38:36] INFO  CA: FC03 JULIO OK
+[2026-07-27 16:39:35] INFO  CA: AK03 JULIO OK
+[2026-07-27 16:41:46] INFO  CA: AK07 JULIO OK
+[2026-07-27 16:41:46] INFO  CA: Completado en 58.8 min, 0 errores
+[2026-07-27 17:08:26] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 17:15:50] ERROR CA: AK06 JULIO error contando SQL: unable to open tcp connection with host '10.10.70.160:1433': dial tcp 10.10.70.160:1433: connectex: Se ha intentado una operación de socket en un host no accesible.
+[2026-07-27 17:19:42] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-27 17:26:44] INFO  CA: Iniciando 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-27 17:33:54] INFO  CA: AK02 ENERO SQL>DBF (581746>525899), borrado y reinsertando...
+[2026-07-27 17:33:56] INFO  CA: AK06 ENERO SQL>DBF (510976>510774), borrado y reinsertando...
+[2026-07-27 17:34:45] WARN  CA: AK03 ENERO error borrando: read tcp 10.10.70.9:52049->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:35:04] ERROR CA: AK03 ENERO el DELETE no se ejecuto (796913 registros aun en BD)
+[2026-07-27 17:35:40] WARN  CA: AK01 ENERO error borrando: read tcp 10.10.70.9:52137->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:35:55] ERROR CA: AK01 ENERO el DELETE no se ejecuto (1113547 registros aun en BD)
+[2026-07-27 17:40:06] WARN  CA: AK04 ENERO error borrando: read tcp 10.10.70.9:52583->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:40:36] ERROR CA: AK04 ENERO error verificando conteo: read tcp 10.10.70.9:52635->10.10.70.160:1433: i/o timeout
+[2026-07-27 17:42:04] WARN  CA: AK05 ENERO error borrando: read tcp 10.10.70.9:52803->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:42:25] ERROR CA: AK05 ENERO el DELETE no se ejecuto (1160250 registros aun en BD)
+[2026-07-27 17:42:37] WARN  CA: AK03 FEBRERO error borrando: read tcp 10.10.70.9:52879->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:43:08] ERROR CA: AK03 FEBRERO error verificando conteo: read tcp 10.10.70.9:52954->10.10.70.160:1433: i/o timeout
+[2026-07-27 17:44:26] WARN  CA: AK01 FEBRERO error borrando: read tcp 10.10.70.9:53081->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:44:37] ERROR CA: AK01 FEBRERO el DELETE no se ejecuto (1103177 registros aun en BD)
+[2026-07-27 17:50:16] WARN  CA: AK03 MARZO error borrando: read tcp 10.10.70.9:53673->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:50:32] ERROR CA: AK03 MARZO el DELETE no se ejecuto (1023918 registros aun en BD)
+[2026-07-27 17:51:15] INFO  CA: AK02 ENERO OK
+[2026-07-27 17:52:06] INFO  CA: AK06 ENERO OK
+[2026-07-27 17:52:51] WARN  CA: AK01 MARZO error borrando: read tcp 10.10.70.9:53925->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:53:01] WARN  CA: AK04 FEBRERO error borrando: read tcp 10.10.70.9:53941->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 17:53:21] ERROR CA: AK01 MARZO error verificando conteo: read tcp 10.10.70.9:53978->10.10.70.160:1433: i/o timeout
+[2026-07-27 17:53:31] ERROR CA: AK04 FEBRERO error verificando conteo: read tcp 10.10.70.9:54008->10.10.70.160:1433: i/o timeout
+[2026-07-27 17:59:00] INFO  CA: Iniciando 19 tiendas, meses 1 a 6, modo=IP
+[2026-07-27 18:05:35] INFO  CA: AK06 ENERO OK (510774 regs, saltado)
+[2026-07-27 18:06:11] INFO  CA: AK02 ENERO OK (525899 regs, saltado)
+[2026-07-27 18:07:09] INFO  CA: AK03 ENERO SQL>DBF (796913>796424), borrado y reinsertando...
+[2026-07-27 18:12:04] INFO  CA: AK01 ENERO SQL>DBF (1113547>1112585), borrado y reinsertando...
+[2026-07-27 18:13:21] INFO  CA: AK04 ENERO SQL>DBF (867900>867196), borrado y reinsertando...
+[2026-07-27 18:14:57] INFO  CA: AK02 FEBRERO OK (523272 regs, saltado)
+[2026-07-27 18:15:52] INFO  CA: AK06 FEBRERO SQL>DBF (498571>497866), borrado y reinsertando...
+[2026-07-27 18:17:13] INFO  CA: AK05 ENERO SQL>DBF (1160250>1160072), borrado y reinsertando...
+[2026-07-27 18:20:23] WARN  CA: AK02 MARZO error borrando: read tcp 10.10.70.9:56664->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 18:20:25] ERROR CA: AK02 MARZO el DELETE no se ejecuto (623261 registros aun en BD)
+[2026-07-27 18:26:35] INFO  CA: AK02 ABRIL SQL>DBF (527795>522731), borrado y reinsertando...
+[2026-07-27 18:46:59] INFO  CA: AK06 FEBRERO OK
+[2026-07-27 18:49:39] INFO  CA: AK03 ENERO OK
+[2026-07-27 18:53:17] INFO  CA: AK02 ABRIL OK
+[2026-07-27 18:54:58] INFO  CA: AK06 MARZO SQL>DBF (589539>554212), borrado y reinsertando...
+[2026-07-27 18:58:03] INFO  CA: AK03 FEBRERO SQL>DBF (818300>789055), borrado y reinsertando...
+[2026-07-27 18:58:35] WARN  CA: AK02 MAYO error borrando: read tcp 10.10.70.9:60432->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 18:58:38] WARN  CA: AK02 MAYO DELETE si se ejecuto a pesar del timeout (era 768937, ahora 468937), reinsertando...
+[2026-07-27 19:05:48] INFO  CA: AK04 ENERO OK
+[2026-07-27 19:12:13] INFO  CA: AK02 MAYO OK
+[2026-07-27 19:16:01] INFO  CA: AK01 ENERO OK
+[2026-07-27 19:16:43] INFO  CA: AK02 JUNIO SQL>DBF (607150>517653), borrado y reinsertando...
+[2026-07-27 19:18:26] INFO  CA: AK04 FEBRERO SQL>DBF (904717>843999), borrado y reinsertando...
+[2026-07-27 19:22:51] INFO  CA: AK05 ENERO OK
+[2026-07-27 19:22:52] INFO  CA: AK06 MARZO OK
+[2026-07-27 19:24:36] INFO  CA: AK01 FEBRERO SQL>DBF (1103177>1076397), borrado y reinsertando...
+[2026-07-27 19:30:19] INFO  CA: AK06 ABRIL SQL>DBF (557101>510035), borrado y reinsertando...
+[2026-07-27 19:36:49] INFO  CA: AK03 FEBRERO OK
+[2026-07-27 19:39:02] INFO  CA: AK05 FEBRERO SQL>DBF (1195913>1163394), borrado y reinsertando...
+[2026-07-27 19:39:14] INFO  CA: AK02 JUNIO OK
+[2026-07-27 19:43:38] INFO  CA: AK03 MARZO SQL>DBF (1023918>921962), borrado y reinsertando...
+[2026-07-27 19:45:47] INFO  CA: AK07 ENERO SQL>DBF (703486>702530), borrado y reinsertando...
+[2026-07-27 19:55:26] INFO  CA: AK06 ABRIL OK
+[2026-07-27 20:03:24] INFO  CA: AK06 MAYO SQL>DBF (636855>559432), borrado y reinsertando...
+[2026-07-27 20:06:32] INFO  CA: AK04 FEBRERO OK
+[2026-07-27 20:18:55] WARN  CA: AK04 MARZO error borrando: read tcp 10.10.70.9:52211->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 20:19:00] WARN  CA: AK04 MARZO DELETE si se ejecuto a pesar del timeout (era 996496, ahora 496496), reinsertando...
+[2026-07-27 20:19:02] INFO  CA: AK07 ENERO OK
+[2026-07-27 20:25:02] INFO  CA: AK07 FEBRERO SQL>DBF (731500>731033), borrado y reinsertando...
+[2026-07-27 20:26:55] INFO  CA: AK03 MARZO OK
+[2026-07-27 20:28:08] INFO  CA: AK01 FEBRERO OK
+[2026-07-27 20:31:08] INFO  CA: AK06 MAYO OK
+[2026-07-27 20:34:01] INFO  CA: AK03 ABRIL SQL>DBF (815760>815629), borrado y reinsertando...
+[2026-07-27 20:37:24] WARN  CA: AK01 MARZO error borrando: read tcp 10.10.70.9:54073->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 20:37:36] WARN  CA: AK01 MARZO DELETE si se ejecuto a pesar del timeout (era 1327546, ahora 727546), reinsertando...
+[2026-07-27 20:39:04] WARN  CA: AK06 JUNIO error borrando: read tcp 10.10.70.9:54364->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 20:39:17] ERROR CA: AK06 JUNIO el DELETE no se ejecuto (762597 registros aun en BD)
+[2026-07-27 20:39:42] INFO  CA: AK05 FEBRERO OK
+[2026-07-27 20:41:18] INFO  CA: AK08 ENERO sin datos DBF
+[2026-07-27 20:43:20] INFO  CA: AK08 FEBRERO sin datos DBF
+[2026-07-27 20:45:57] INFO  CA: AK08 MARZO OK (150157 regs, saltado)
+[2026-07-27 20:48:21] INFO  CA: AK08 ABRIL OK (838170 regs, saltado)
+[2026-07-27 20:50:29] INFO  CA: AK08 MAYO OK (781018 regs, saltado)
+[2026-07-27 20:52:33] INFO  CA: AK08 JUNIO OK (718896 regs, saltado)
+[2026-07-27 20:52:54] INFO  CA: AK09 ENERO sin datos DBF
+[2026-07-27 20:53:12] INFO  CA: AK09 FEBRERO sin datos DBF
+[2026-07-27 20:53:33] INFO  CA: AK09 MARZO sin datos DBF
+[2026-07-27 20:53:50] INFO  CA: AK09 ABRIL sin datos DBF
+[2026-07-27 20:54:09] INFO  CA: AK09 MAYO sin datos DBF
+[2026-07-27 20:54:27] INFO  CA: AK09 JUNIO sin datos DBF
+[2026-07-27 20:54:50] INFO  CA: FC01 ENERO sin datos DBF
+[2026-07-27 20:54:50] INFO  CA: FC01 FEBRERO sin datos DBF
+[2026-07-27 20:54:50] INFO  CA: FC01 MARZO sin datos DBF
+[2026-07-27 20:54:50] INFO  CA: FC01 ABRIL sin datos DBF
+[2026-07-27 20:54:50] INFO  CA: FC01 MAYO sin datos DBF
+[2026-07-27 20:54:50] INFO  CA: FC01 JUNIO sin datos DBF
+[2026-07-27 20:57:06] INFO  CA: AK04 MARZO OK
+[2026-07-27 20:58:49] INFO  CA: FC02 ENERO OK (383448 regs, saltado)
+[2026-07-27 20:59:29] INFO  CA: AK05 MARZO OK
+[2026-07-27 20:59:29] INFO  CA: AK05 ABRIL sin datos DBF
+[2026-07-27 20:59:29] INFO  CA: AK05 MAYO sin datos DBF
+[2026-07-27 20:59:29] INFO  CA: AK05 JUNIO sin datos DBF
+[2026-07-27 21:01:18] INFO  CA: AK07 FEBRERO OK
+[2026-07-27 21:03:09] INFO  CA: FC02 FEBRERO SQL>DBF (360683>360642), borrado y reinsertando...
+[2026-07-27 21:06:51] INFO  CA: FC03 ENERO OK (395483 regs, saltado)
+[2026-07-27 21:07:18] INFO  CA: AK07 MARZO SQL>DBF (1111595>915303), borrado y reinsertando...
+[2026-07-27 21:09:53] INFO  CA: AK04 ABRIL SQL>DBF (1085628>910147), borrado y reinsertando...
+[2026-07-27 21:11:07] INFO  CA: AK03 ABRIL OK
+[2026-07-27 21:15:04] INFO  CA: FC03 FEBRERO SQL>DBF (441639>387858), borrado y reinsertando...
+[2026-07-27 21:17:18] INFO  CA: FC02 FEBRERO OK
+[2026-07-27 21:17:27] WARN  CA: AK03 MAYO error borrando: read tcp 10.10.70.9:58150->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 21:17:32] WARN  CA: AK03 MAYO DELETE si se ejecuto a pesar del timeout (era 1314599, ahora 914599), reinsertando...
+[2026-07-27 21:21:07] INFO  CA: FC02 MARZO OK (416258 regs, saltado)
+[2026-07-27 21:25:22] INFO  CA: FC02 ABRIL SQL>DBF (430029>353879), borrado y reinsertando...
+[2026-07-27 21:33:58] INFO  CA: AK03 MAYO OK
+[2026-07-27 21:34:15] INFO  CA: FC03 FEBRERO OK
+[2026-07-27 21:38:18] INFO  CA: FC02 ABRIL OK
+[2026-07-27 21:40:29] INFO  CA: AK03 JUNIO SQL>DBF (931128>859398), borrado y reinsertando...
+[2026-07-27 21:41:19] INFO  CA: FC03 MARZO OK (432992 regs, saltado)
+[2026-07-27 21:42:26] INFO  CA: FC02 MAYO SQL>DBF (439650>362140), borrado y reinsertando...
+[2026-07-27 21:43:04] INFO  CA: AK07 MARZO OK
+[2026-07-27 21:49:49] INFO  CA: FC03 ABRIL SQL>DBF (499302>379787), borrado y reinsertando...
+[2026-07-27 21:50:24] INFO  CA: AK07 ABRIL SQL>DBF (890135>846358), borrado y reinsertando...
+[2026-07-27 21:54:35] INFO  CA: AK04 ABRIL OK
+[2026-07-27 21:57:55] INFO  CA: FC02 MAYO OK
+[2026-07-27 22:01:28] INFO  CA: AK01 MARZO OK
+[2026-07-27 22:01:43] INFO  CA: FC02 JUNIO OK (332667 regs, saltado)
+[2026-07-27 22:04:34] INFO  CA: FC04 ENERO SQL>DBF (337155>336981), borrado y reinsertando...
+[2026-07-27 22:06:29] WARN  CA: AK04 MAYO error borrando: read tcp 10.10.70.9:63124->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 22:06:31] WARN  CA: AK04 MAYO DELETE si se ejecuto a pesar del timeout (era 1085463, ahora 685463), reinsertando...
+[2026-07-27 22:10:05] WARN  CA: AK01 ABRIL error borrando: read tcp 10.10.70.9:63394->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 22:10:10] WARN  CA: AK01 ABRIL DELETE si se ejecuto a pesar del timeout (era 1166979, ahora 516979), reinsertando...
+[2026-07-27 22:20:43] INFO  CA: FC04 ENERO OK
+[2026-07-27 22:22:11] INFO  CA: AK03 JUNIO OK
+[2026-07-27 22:22:47] WARN  CA: FC04 FEBRERO error borrando: read tcp 10.10.70.9:64856->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-27 22:22:59] ERROR CA: FC04 FEBRERO el DELETE no se ejecuto (352336 registros aun en BD)
+[2026-07-27 22:23:40] INFO  CA: FC05 ENERO OK (282453 regs, saltado)
+[2026-07-27 22:24:28] INFO  CA: FC04 MARZO OK (373283 regs, saltado)
+[2026-07-27 22:25:10] INFO  CA: FC05 FEBRERO OK (290677 regs, saltado)
+[2026-07-27 22:26:40] INFO  CA: FC05 MARZO OK (321785 regs, saltado)
+[2026-07-27 22:26:40] INFO  CA: FC04 ABRIL SQL>DBF (359175>333238), borrado y reinsertando...
+[2026-07-27 22:29:12] INFO  CA: FC05 ABRIL SQL>DBF (323548>293523), borrado y reinsertando...
+[2026-07-27 22:29:51] INFO  CA: FC03 ABRIL OK
+[2026-07-27 22:35:35] INFO  CA: AK07 ABRIL OK
+[2026-07-27 22:37:23] INFO  CA: FC03 MAYO OK (396901 regs, saltado)
+[2026-07-27 22:39:57] INFO  CA: AK04 MAYO OK
+[2026-07-27 22:41:35] INFO  CA: FC05 ABRIL OK
+[2026-07-27 22:41:56] INFO  CA: FC04 ABRIL OK
+[2026-07-27 22:42:04] INFO  CA: AK07 MAYO SQL>DBF (974180>934178), borrado y reinsertando...
+[2026-07-27 22:43:43] INFO  CA: FC04 MAYO OK (341115 regs, saltado)
+[2026-07-27 22:43:56] INFO  CA: FC05 MAYO SQL>DBF (355187>304446), borrado y reinsertando...
+[2026-07-27 22:46:28] INFO  CA: FC04 JUNIO SQL>DBF (330355>310629), borrado y reinsertando...
+[2026-07-27 22:46:34] INFO  CA: FC03 JUNIO SQL>DBF (451026>386119), borrado y reinsertando...
+[2026-07-27 22:49:42] INFO  CA: AK01 ABRIL OK
+[2026-07-27 22:53:00] INFO  CA: AK04 JUNIO SQL>DBF (991233>956276), borrado y reinsertando...
+[2026-07-27 22:55:45] INFO  CA: FC05 MAYO OK
+[2026-07-27 22:57:20] INFO  CA: FC05 JUNIO OK (288760 regs, saltado)
+[2026-07-27 22:58:11] INFO  CA: AK01 MAYO SQL>DBF (1171438>1149166), borrado y reinsertando...
+[2026-07-27 22:58:13] INFO  CA: FC04 JUNIO OK
+[2026-07-27 22:58:15] INFO  CA: HC01 ENERO OK (3775 regs, saltado)
+[2026-07-27 22:58:16] INFO  CA: HC01 FEBRERO OK (3109 regs, saltado)
+[2026-07-27 22:58:16] INFO  CA: HC01 MARZO OK (4364 regs, saltado)
+[2026-07-27 22:58:16] INFO  CA: HC01 ABRIL OK (2670 regs, saltado)
+[2026-07-27 22:58:17] INFO  CA: HC01 MAYO OK (3568 regs, saltado)
+[2026-07-27 22:58:17] INFO  CA: HC01 JUNIO OK (2405 regs, saltado)
+[2026-07-27 22:58:36] INFO  CA: HC02 ENERO OK (16278 regs, saltado)
+[2026-07-27 22:58:40] INFO  CA: HC02 FEBRERO OK (18064 regs, saltado)
+[2026-07-27 22:58:42] INFO  CA: HC02 MARZO OK (28104 regs, saltado)
+[2026-07-27 22:58:44] INFO  CA: HC02 ABRIL OK (22043 regs, saltado)
+[2026-07-27 22:58:46] INFO  CA: HC02 MAYO OK (32970 regs, saltado)
+[2026-07-27 22:58:48] INFO  CA: HC02 JUNIO OK (22706 regs, saltado)
+[2026-07-27 22:59:07] INFO  CA: VC01 ENERO sin datos DBF
+[2026-07-27 22:59:15] INFO  CA: VC01 FEBRERO OK (6965 regs, saltado)
+[2026-07-27 22:59:22] INFO  CA: VC01 MARZO OK (121962 regs, saltado)
+[2026-07-27 22:59:28] INFO  CA: VC01 ABRIL OK (94414 regs, saltado)
+[2026-07-27 22:59:35] INFO  CA: VC01 MAYO OK (110906 regs, saltado)
+[2026-07-27 22:59:42] INFO  CA: VC01 JUNIO OK (102716 regs, saltado)
+[2026-07-27 22:59:57] INFO  CA: VC02 ENERO sin datos DBF
+[2026-07-27 23:00:02] INFO  CA: VC02 FEBRERO sin datos DBF
+[2026-07-27 23:00:04] INFO  CA: VC02 MARZO sin datos DBF
+[2026-07-27 23:00:06] INFO  CA: VC02 ABRIL sin datos DBF
+[2026-07-27 23:00:14] INFO  CA: VC02 MAYO OK (71429 regs, saltado)
+[2026-07-27 23:00:19] INFO  CA: VC02 JUNIO OK (70024 regs, saltado)
+[2026-07-27 23:01:17] INFO  CA: FC06 ENERO SQL>DBF (577078>576671), borrado y reinsertando...
+[2026-07-27 23:08:04] INFO  CA: FC03 JUNIO OK
+[2026-07-27 23:24:54] INFO  CA: AK07 MAYO OK
+[2026-07-27 23:25:14] INFO  CA: FC06 ENERO OK
+[2026-07-27 23:30:27] INFO  CA: FC06 FEBRERO SQL>DBF (594717>551268), borrado y reinsertando...
+[2026-07-27 23:31:58] INFO  CA: AK07 JUNIO OK (902972 regs, saltado)
+[2026-07-27 23:45:26] INFO  CA: AK01 MAYO OK
+[2026-07-27 23:47:20] INFO  CA: FC06 FEBRERO OK
+[2026-07-27 23:51:19] INFO  CA: FC06 MARZO SQL>DBF (675859>622468), borrado y reinsertando...
+[2026-07-27 23:52:05] INFO  CA: AK01 JUNIO OK (1091400 regs, saltado)
+[2026-07-28 00:04:05] INFO  CA: FC06 MARZO OK
+[2026-07-28 00:07:36] INFO  CA: FC06 ABRIL SQL>DBF (819045>586596), borrado y reinsertando...
+[2026-07-28 00:21:09] INFO  CA: FC06 ABRIL OK
+[2026-07-28 00:28:41] INFO  CA: FC06 MAYO SQL>DBF (875306>634802), borrado y reinsertando...
+[2026-07-28 00:46:17] INFO  CA: AK04 JUNIO OK
+[2026-07-28 00:48:47] INFO  CA: FC06 MAYO OK
+[2026-07-28 00:52:34] INFO  CA: FC06 JUNIO SQL>DBF (793418>581821), borrado y reinsertando...
+[2026-07-28 01:04:13] INFO  CA: FC06 JUNIO OK
+[2026-07-28 01:04:13] INFO  CA: Completado en 425.2 min, 0 errores
+[2026-07-28 17:54:21] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-28 18:07:42] WARN  CA: AK04 JULIO error borrando: read tcp 10.10.70.9:49411->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-28 18:07:47] WARN  CA: AK04 JULIO DELETE si se ejecuto a pesar del timeout (era 1542771, ahora 1442771), reinsertando...
+[2026-07-28 18:11:29] WARN  CA: AK05 JULIO error borrando: read tcp 10.10.70.9:49477->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-28 18:11:54] WARN  CA: AK05 JULIO DELETE si se ejecuto a pesar del timeout (era 1295485, ahora 1195485), reinsertando...
+[2026-07-28 18:13:06] INFO  CA: AK02 JULIO OK
+[2026-07-28 18:15:52] INFO  CA: AK06 JULIO OK
+[2026-07-28 18:19:02] INFO  CA: AK03 JULIO OK
+[2026-07-28 18:23:39] INFO  CA: AK09 JULIO OK
+[2026-07-28 18:31:53] INFO  CA: AK08 JULIO OK
+[2026-07-28 18:33:54] INFO  CA: AK07 JULIO OK
+[2026-07-28 18:37:01] INFO  CA: FC01 JULIO OK
+[2026-07-28 18:41:34] INFO  CA: AK01 JULIO OK
+[2026-07-28 18:42:54] INFO  CA: FC02 JULIO OK
+[2026-07-28 18:43:36] INFO  CA: FC04 JULIO OK
+[2026-07-28 18:43:45] INFO  CA: HC01 JULIO OK
+[2026-07-28 18:44:31] INFO  CA: HC02 JULIO OK
+[2026-07-28 18:46:01] INFO  CA: VC01 JULIO OK
+[2026-07-28 18:46:45] INFO  CA: AK04 JULIO OK
+[2026-07-28 18:47:00] INFO  CA: FC05 JULIO OK
+[2026-07-28 18:47:07] INFO  CA: VC02 JULIO OK
+[2026-07-28 18:47:25] INFO  CA: AK05 JULIO OK
+[2026-07-28 18:51:46] INFO  CA: FC06 JULIO OK
+[2026-07-28 18:52:14] INFO  CA: FC03 JULIO OK
+[2026-07-28 18:52:15] INFO  CA: Completado en 57.9 min, 0 errores
+[2026-07-29 08:23:04] INFO  CA: Iniciando 19 tiendas, meses 7 a 7, modo=IP
+[2026-07-29 08:35:51] WARN  CA: AK04 JULIO error borrando: read tcp 10.10.70.9:50828->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-29 08:35:56] ERROR CA: AK04 JULIO el DELETE no se ejecuto (1547215 registros aun en BD)
+[2026-07-29 08:36:08] INFO  CA: AK01 JULIO SQL>DBF (1010480>994406), borrado y reinsertando...
+[2026-07-29 08:39:54] INFO  CA: AK06 JULIO OK
+[2026-07-29 08:39:55] WARN  CA: AK05 JULIO error borrando: read tcp 10.10.70.9:50891->10.10.70.160:1433: i/o timeout, verificando si se eliminaron registros...
+[2026-07-29 08:40:01] WARN  CA: AK05 JULIO DELETE si se ejecuto a pesar del timeout (era 1342480, ahora 1142480), reinsertando...
