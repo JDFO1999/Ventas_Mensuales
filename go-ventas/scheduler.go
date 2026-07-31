@@ -11,7 +11,7 @@ import (
 func MenuConfig() {
 	cfg := Config{
 		Modo:             "S",
-		OutputDir:        `C:\Users\Alkosto\Desktop\excel - automatico`,
+		OutputDir:        `C:\Users\Administrador\Desktop\Reportes FA`,
 		HoraInicio:       8,
 		HoraFin:          20,
 		IntervaloMinutos: 120,
@@ -113,7 +113,8 @@ if "%%MES:~0,1%%"=="0" set MES=%%MES:~1,1%%
 
 echo [%%date%% %%time%%] Iniciando...
 "%s\ventas_mensuales.exe" --auto --month=%%MES%% --year=%%ANIO%% --mode=%s
-echo [%%date%% %%time%%] Completado.
+	echo [%%date%% %%time%%] Completado.
+	pause
 `, exeDir, cfg.Modo)
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
 
@@ -139,10 +140,11 @@ echo [%%date%% %%time%%] Completado.
 
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensuales"
-$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/c "' + "%s" + '"')
+$action = New-ScheduledTaskAction -Execute "%s\ventas_mensuales.exe" -Argument '--auto --mode=%s'
 %s
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 $loggedUser = (Get-CimInstance -ClassName Win32_ComputerSystem).UserName
+if (-not $loggedUser) { $loggedUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
 $principal = New-ScheduledTaskPrincipal -UserId $loggedUser -LogonType Interactive -RunLevel Highest
 
 try {
@@ -152,7 +154,7 @@ try {
 } catch {
     Write-Host "ERROR: $_"
 }
-`, cmdPath, psTrigger, psMessage)
+`, exeDir, cfg.Modo, psTrigger, psMessage)
 	os.WriteFile(psPath, []byte(ps), 0644)
 
 	fmt.Println("\n  Archivos creados:")
@@ -172,7 +174,7 @@ try {
 	}
 }
 
-func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless bool) {
+func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless bool, tipoEjecucion string) {
 	if !headless {
 		defer func() {
 			if r := recover(); r != nil {
@@ -206,44 +208,44 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 	total := len(sucursales)
 	procesadas := 0
 	saltadas := 0
-	borradas := 0
 	var tasks []tareaTienda
+	type tiendaInfo struct {
+		totalSQL int
+	}
+	info := make(map[string]tiendaInfo)
 
 	for i, s := range sucursales {
-		totalDBF := ContarRegistrosDBF_FA(s, year, month, cfg.Modo)
-		if totalDBF == 0 {
-			fmt.Printf("  %s: sin datos DBF\n", s.Codigo)
-			continue
-		}
-
+		mStart := time.Now()
 		totalSQL, errCnt := ContarFASQL(db, s.Codigo, year, month)
 		if errCnt != nil {
+			InsertarH_Tiendas(db, s.Codigo, year, month, 0, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), cfg.Modo, tipoEjecucion, "FA")
 			fmt.Printf("  %s: ERROR contando SQL: %v\n", s.Codigo, errCnt)
 			continue
 		}
 
-		if totalDBF == totalSQL {
+		if totalSQL > 0 {
+			InsertarH_Tiendas(db, s.Codigo, year, month, 0, totalSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), cfg.Modo, tipoEjecucion, "FA")
 			fmt.Printf("  %s: SALTADO (%d regs)\n", s.Codigo, totalSQL)
 			saltadas++
 			continue
 		}
 
-		if totalSQL > totalDBF {
-			fmt.Printf("  %s: SQL>DBF (%d>%d), borrando...\n", s.Codigo, totalSQL, totalDBF)
-			if err := BorrarDatosTienda(db, s.Codigo, year, month); err != nil {
-				fmt.Printf("  %s: ERROR borrando: %v\n", s.Codigo, err)
-				continue
-			}
-			borradas++
-		}
-
+		info[s.Codigo] = tiendaInfo{totalSQL}
 		tasks = append(tasks, tareaTienda{idx: i, suc: s})
 		procesadas++
 	}
 
 	if len(tasks) > 0 {
 		fmt.Printf("  Procesando DBF para %d tiendas...\n", len(tasks))
-		procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+		dbfResultados := procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
+		for _, t := range tasks {
+			r := dbfResultados[t.idx]
+			if r.Clientes > 0 || r.Tienda != "" {
+				InsertarH_Tiendas(db, t.suc.Codigo, year, month, 0, 0, 0, "OK", 0, cfg.Modo, tipoEjecucion, "FA")
+			} else {
+				InsertarH_Tiendas(db, t.suc.Codigo, year, month, 0, 0, 0, "ERROR", 0, cfg.Modo, tipoEjecucion, "FA")
+			}
+		}
 	}
 
 	if procesadas == 0 && saltadas > 0 {
@@ -393,7 +395,7 @@ func estadoTareaCA() string {
 func MenuConfigCA() {
 	cfg := Config{
 		Modo:             "S",
-		OutputDir:        `C:\Users\Alkosto\Desktop\excel - automatico`,
+		OutputDir:        `C:\Users\Administrador\Desktop\Reportes FA`,
 		HoraInicio:       6,
 		HoraFin:          6,
 		IntervaloMinutos: 1440,
@@ -455,7 +457,8 @@ func crearTareaProgramadaCA(cfg Config) {
 REM Ventas Mensuales CA - Ejecucion automatica
 echo [%%date%% %%time%%] CA Iniciando...
 "%s\ventas_mensuales.exe" --auto-ca --mode=%s
-echo [%%date%% %%time%%] CA Completado.
+	echo [%%date%% %%time%%] CA Completado.
+	pause
 `, exeDir, cfg.Modo)
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
 
@@ -465,10 +468,11 @@ echo [%%date%% %%time%%] CA Completado.
 
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensualesCA"
-$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/c "' + "%s" + '"')
+$action = New-ScheduledTaskAction -Execute "%s\ventas_mensuales.exe" -Argument '--auto-ca --mode=%s'
 %s
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 $loggedUser = (Get-CimInstance -ClassName Win32_ComputerSystem).UserName
+if (-not $loggedUser) { $loggedUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
 $principal = New-ScheduledTaskPrincipal -UserId $loggedUser -LogonType Interactive -RunLevel Highest
 
 try {
@@ -478,7 +482,7 @@ try {
 } catch {
     Write-Host "ERROR: $_"
 }
-`, cmdPath, psTrigger, psMessage)
+`, exeDir, cfg.Modo, psTrigger, psMessage)
 	os.WriteFile(psPath, []byte(ps), 0644)
 
 	fmt.Println("\n  Archivos creados:")

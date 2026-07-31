@@ -20,7 +20,7 @@ const (
 )
 
 func ConectarSQL() (*sql.DB, error) {
-	connStr := fmt.Sprintf("server=%s;database=%s;user id=%s;password=%s;encrypt=disable;connection timeout=10",
+	connStr := fmt.Sprintf("server=%s;database=%s;user id=%s;password=%s;encrypt=disable;connection timeout=30;timeout=600",
 		SQLServer, SQLDatabase, SQLUser, SQLPassword)
 	db, err := sql.Open("mssql", connStr)
 	if err != nil {
@@ -163,7 +163,14 @@ func CrearTablaPosVentas(db *sql.DB) error {
 	}
 	_, err = db.Exec(`
 		IF OBJECT_ID('PK_PosVentas','PK') IS NULL
-		ALTER TABLE PosVentas ADD CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
+		BEGIN
+			DELETE t FROM (
+				SELECT *, ROW_NUMBER() OVER (
+					PARTITION BY Tienda, Caja, Numero, Tipo ORDER BY FechaCarga
+				) AS rn FROM PosVentas
+			) t WHERE t.rn > 1
+			ALTER TABLE PosVentas ADD CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
+		END
 	`)
 	return err
 }
@@ -188,14 +195,23 @@ func ContarFASQL(db *sql.DB, codigo string, year, month int) (int, error) {
 	return count, err
 }
 
-func BorrarDatosTienda(db *sql.DB, codigo string, year, month int) error {
+func BorrarDatosTienda(ctx context.Context, db *sql.DB, codigo string, year, month int) error {
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0)
-	_, err := db.Exec(
-		"DELETE FROM PosVentas WHERE Tienda=? AND Fecha >= ? AND Fecha < ?",
-		codigo, startDate, endDate,
-	)
-	return err
+	for {
+		result, err := db.ExecContext(ctx,
+			"DELETE TOP(10000) FROM PosVentas WHERE Tienda=? AND Fecha >= ? AND Fecha < ?",
+			codigo, startDate, endDate,
+		)
+		if err != nil {
+			return err
+		}
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			break
+		}
+	}
+	return nil
 }
 
 func InsertarVentas(db *sql.DB, registros []VentaRegistro) error {
@@ -476,14 +492,21 @@ func CrearTablaH_Tiendas(db *sql.DB) error {
 			TipoEjecucion   VARCHAR(20) NOT NULL
 		)
 	`)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`
+		IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('H_Tiendas') AND name = 'Sistema')
+		ALTER TABLE H_Tiendas ADD Sistema VARCHAR(10) NULL
+	`)
 	return err
 }
 
-func InsertarH_Tiendas(db *sql.DB, tienda string, anio, mes int, registrosDBF, registrosSQL, insertados int, estado string, duracionSeg int, modo string, tipoEjecucion string) error {
+func InsertarH_Tiendas(db *sql.DB, tienda string, anio, mes int, registrosDBF, registrosSQL, insertados int, estado string, duracionSeg int, modo string, tipoEjecucion string, sistema string) error {
 	_, err := db.Exec(
-		`INSERT INTO H_Tiendas (Tienda, Anio, Mes, RegistrosDBF, RegistrosSQL, Insertados, Estado, DuracionSeg, Modo, TipoEjecucion)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		tienda, anio, mes, registrosDBF, registrosSQL, insertados, estado, duracionSeg, modo, tipoEjecucion,
+		`INSERT INTO H_Tiendas (Tienda, Anio, Mes, RegistrosDBF, RegistrosSQL, Insertados, Estado, DuracionSeg, Modo, TipoEjecucion, Sistema)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		tienda, anio, mes, registrosDBF, registrosSQL, insertados, estado, duracionSeg, modo, tipoEjecucion, sistema,
 	)
 	return err
 }

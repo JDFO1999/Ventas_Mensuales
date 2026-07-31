@@ -389,10 +389,13 @@ func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, mon
 		}
 		resultChan := make(chan storeRes, len(pendientes))
 
+		sem := make(chan struct{}, 6)
 		for _, t := range pendientes {
+			sem <- struct{}{}
 			wg.Add(1)
 			go func(tt tareaTienda) {
 				defer wg.Done()
+				defer func() { <-sem }()
 				defer func() {
 					if r := recover(); r != nil {
 						fmt.Printf("\n  %s - PANIC: %v\n", tt.suc.Codigo, r)
@@ -802,7 +805,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				if err != nil {
 					mu.Lock()
 					logError("CA: %s %s FALLO conexion: %v", store.Codigo, MesesES[m], err)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					mu.Unlock()
 					continue
 				}
@@ -816,7 +819,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				if errCnt != nil {
 					mu.Lock()
 					logError("CA: %s %s error contando SQL: %v", store.Codigo, MesesES[m], errCnt)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					mu.Unlock()
 					continue
 				}
@@ -824,7 +827,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				if totalDBF == totalSQL {
 					mu.Lock()
 					logInfo("CA: %s %s OK (%d regs, saltado)", store.Codigo, MesesES[m], totalSQL)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					mu.Unlock()
 					continue
 				}
@@ -837,7 +840,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 					if err != nil {
 						mu.Lock()
 						logError("CA: %s %s FALLO conexion borrado: %v", store.Codigo, MesesES[m], err)
-						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 						mu.Unlock()
 						continue
 					}
@@ -856,7 +859,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 						if errRecon != nil {
 							mu.Lock()
 							logError("CA: %s %s FALLO reconexion verificacion: %v", store.Codigo, MesesES[m], errRecon)
-							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 							mu.Unlock()
 							continue
 						}
@@ -869,7 +872,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 						if errCount != nil {
 							mu.Lock()
 							logError("CA: %s %s error verificando conteo: %v", store.Codigo, MesesES[m], errCount)
-							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 							mu.Unlock()
 							continue
 						}
@@ -877,7 +880,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 						if nuevoCount >= totalSQL {
 							mu.Lock()
 							logError("CA: %s %s el DELETE no se ejecuto (%d registros aun en BD)", store.Codigo, MesesES[m], nuevoCount)
-							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 							mu.Unlock()
 							continue
 						}
@@ -912,10 +915,10 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 						}
 					}
 					logInfo("CA: %s %s OK", store.Codigo, MesesES[m])
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, insertados, "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, insertados, "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 				} else {
 					logError("CA: %s %s FALLO: %v", store.Codigo, MesesES[m], lastErr)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					erroresGlobal++
 				}
 				mu.Unlock()

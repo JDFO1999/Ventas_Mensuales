@@ -13,7 +13,7 @@ import (
 	"database/sql"
 )
 
-const outputDir = `C:\Users\Alkosto\Desktop\excel - automatico`
+const outputDir = `C:\Users\Administrador\Desktop\Reportes FA`
 
 var (
 	logFile *os.File
@@ -128,7 +128,7 @@ func main() {
 			mode = cfg.Modo
 		}
 		cfg := Config{Modo: mode, OutputDir: outputDir}
-		procesarAutomatico(year, month, cfg, false, true)
+		procesarAutomatico(year, month, cfg, false, true, "AUTOMATICO")
 		return
 	}
 
@@ -235,7 +235,7 @@ func ejecutarAutomaticoManual() {
 	}
 	fmt.Printf("  Modo lectura: %s | Output: %s\n\n", cfg.Modo, cfg.OutputDir)
 
-	procesarAutomatico(anio, mes, cfg, true, false)
+	procesarAutomatico(anio, mes, cfg, true, false, "MANUAL")
 }
 
 func ejecutarAutomaticoCAManual() {
