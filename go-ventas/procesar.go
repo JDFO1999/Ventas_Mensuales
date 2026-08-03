@@ -252,7 +252,9 @@ func ProcesarTienda(sucursal Sucursal, db *sql.DB, year, month int, modo string,
 			tFileElapsed := time.Since(tFileStart)
 
 			if err != nil || totalFacturas == 0 {
-				if totalFacturas == 0 {
+				if err != nil {
+					logError("FA: error leyendo %s: %v", dbfPath, err)
+				} else {
 					fmt.Printf("\n  [%s] -> sin datos (%.1fs)", dbfPath, tFileElapsed.Seconds())
 				}
 				continue
@@ -450,6 +452,17 @@ func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, mon
 }
 
 func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) ([]VentaCARegistro, error) {
+	if month > 0 {
+		inicio := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+		fin := inicio.AddDate(0, 1, 0)
+		return leerArchivoCARango(filepathCA, year, inicio, fin, tienda, caja)
+	}
+	inicio := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	fin := inicio.AddDate(1, 0, 0)
+	return leerArchivoCARango(filepathCA, year, inicio, fin, tienda, caja)
+}
+
+func leerArchivoCARango(filepathCA string, year int, inicio, fin time.Time, tienda string, caja int) ([]VentaCARegistro, error) {
 	dbf, err := OpenDBF(filepathCA)
 	if err != nil {
 		return nil, err
@@ -493,14 +506,14 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 		fmt.Sscanf(diaStr, "%d", &dd)
 		fmt.Sscanf(mesStr, "%d", &mm)
 		fmt.Sscanf(anioStr, "%d", &yy)
-		if month > 0 && (yy != year || mm != month) {
-			continue
-		}
 		if yy != year {
 			continue
 		}
 
 		fecha := time.Date(yy, time.Month(mm), dd, 0, 0, 0, 0, time.UTC)
+		if fecha.Before(inicio) || !fecha.Before(fin) {
+			continue
+		}
 
 		hi := dbf.FieldIndex("HORA24")
 		hora := 0
@@ -581,6 +594,25 @@ func LeerArchivoCA(filepathCA string, year, month int, tienda string, caja int) 
 	return registros, nil
 }
 
+func rangoUltimosDias(year, month, n int) (time.Time, time.Time) {
+	primerDia := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	finMes := primerDia.AddDate(0, 1, 0)
+	hoy := time.Now()
+	if hoy.Year() != year || int(hoy.Month()) != month {
+		return primerDia, finMes
+	}
+	diaInicio := hoy.Day() - n + 1
+	if diaInicio < 1 {
+		diaInicio = 1
+	}
+	inicio := time.Date(year, time.Month(month), diaInicio, 0, 0, 0, 0, time.UTC)
+	fin := time.Date(year, time.Month(month), hoy.Day()+1, 0, 0, 0, 0, time.UTC)
+	if fin.After(finMes) {
+		fin = finMes
+	}
+	return inicio, fin
+}
+
 func ContarRegistrosDBF_Mes(sucursal Sucursal, year, month int, modo string) int {
 	codigo := sucursal.Codigo
 
@@ -626,6 +658,136 @@ func ContarRegistrosDBF_Mes(sucursal Sucursal, year, month int, modo string) int
 		total += len(regs)
 	}
 	return total
+}
+
+func contarRegistrosCARango(dbfPath string, year int, inicio, fin time.Time) (int, error) {
+	dbf, err := OpenDBF(dbfPath)
+	if err != nil {
+		return 0, err
+	}
+	defer dbf.Close()
+
+	ai := dbf.FieldIndex("ANULADA")
+	diai := dbf.FieldIndex("DIA")
+	mesi := dbf.FieldIndex("MES")
+	anioi := dbf.FieldIndex("ANIO")
+	if diai < 0 || mesi < 0 || anioi < 0 {
+		return 0, nil
+	}
+
+	count := 0
+	for i := 0; i < dbf.NumRecords; i++ {
+		rec, err := dbf.ReadRecord(i)
+		if err != nil || len(rec) == 0 {
+			continue
+		}
+		if rec[0] == 0x2A {
+			continue
+		}
+		if ai >= 0 && dbf.GetString(rec, dbf.Fields[ai]) == "T" {
+			continue
+		}
+
+		diaStr := dbf.GetString(rec, dbf.Fields[diai])
+		mesStr := dbf.GetString(rec, dbf.Fields[mesi])
+		anioStr := dbf.GetString(rec, dbf.Fields[anioi])
+		var dd, mm, yy int
+		fmt.Sscanf(diaStr, "%d", &dd)
+		fmt.Sscanf(mesStr, "%d", &mm)
+		fmt.Sscanf(anioStr, "%d", &yy)
+		if yy != year {
+			continue
+		}
+		fecha := time.Date(yy, time.Month(mm), dd, 0, 0, 0, 0, time.UTC)
+		if fecha.Before(inicio) || !fecha.Before(fin) {
+			continue
+		}
+		count++
+	}
+	return count, nil
+}
+
+func ContarRegistrosDBF_Rango(sucursal Sucursal, year int, inicio, fin time.Time, modo string) int {
+	codigo := sucursal.Codigo
+
+	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && sucursal.RutaIP != "" {
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+		} else if modo == "IP" {
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+		}
+	}
+	if err != nil {
+		return 0
+	}
+
+	total := 0
+	for _, dirName := range posDirs {
+		posNum, err := strconv.Atoi(dirName[3:])
+		if err != nil {
+			continue
+		}
+
+		var posPath string
+		if modo == "S" {
+			if sucursal.RutaDBF != "" {
+				posPath = strings.TrimRight(sucursal.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", sucursal.RutaIP, dirName)
+		}
+
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
+		if _, err := os.Stat(dbfPath); err != nil {
+			continue
+		}
+
+		n, err := contarRegistrosCARango(dbfPath, year, inicio, fin)
+		if err != nil {
+			continue
+		}
+		total += n
+	}
+	return total
+}
+
+func tieneDatosFA(sucursal Sucursal, year int, modo string) bool {
+	posDirs, err := ListarPOS(sucursal.Codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && sucursal.RutaIP != "" {
+			posDirs, err = ListarPOS(sucursal.Codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+		} else if modo == "IP" {
+			posDirs, err = ListarPOS(sucursal.Codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+		}
+	}
+	if err != nil {
+		return false
+	}
+
+	for _, dirName := range posDirs {
+		posNum, err := strconv.Atoi(dirName[3:])
+		if err != nil {
+			continue
+		}
+		var posPath string
+		if modo == "S" {
+			if sucursal.RutaDBF != "" {
+				posPath = strings.TrimRight(sucursal.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", sucursal.Codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", sucursal.RutaIP, dirName)
+		}
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("FC%02d%d.DBF", posNum, year))
+		if _, err := os.Stat(dbfPath); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func ContarRegistrosDBF_FA(sucursal Sucursal, year, month int, modo string) int {
@@ -675,7 +837,7 @@ func ContarRegistrosDBF_FA(sucursal Sucursal, year, month int, modo string) int 
 	return total
 }
 
-func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, total int) error {
+func ProcesarTiendaCA(sucursal Sucursal, year, month int, inicio, fin time.Time, modo string, idx, total int) error {
 	codigo := sucursal.Codigo
 
 	dbCA, err := ConectarSQL_CA(codigo)
@@ -736,7 +898,7 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, modo string, idx, tota
 		sizeMB := float64(info.Size()) / (1024 * 1024)
 		fmt.Printf("\r  %s", pfx("%s  [%s] %.1f MB leyendo...", codigo, filepath.Base(dbfPath), sizeMB))
 
-		regs, err := LeerArchivoCA(dbfPath, year, month, codigo, posNum)
+		regs, err := leerArchivoCARango(dbfPath, year, inicio, fin, codigo, posNum)
 		tElapsed := time.Since(tStart)
 
 		if err != nil || len(regs) == 0 {
@@ -793,10 +955,23 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 
 			for m := mesInicio; m <= mesFin; m++ {
 				mStart := time.Now()
-				totalDBF := ContarRegistrosDBF_Mes(store, year, m, modo)
+
+				esAutoMesActual := tipoEjecucion == "AUTOMATICO" && m == int(time.Now().Month())
+
+				primerDia := time.Date(year, time.Month(m), 1, 0, 0, 0, 0, time.UTC)
+				finMes := primerDia.AddDate(0, 1, 0)
+				inicio, fin := primerDia, finMes
+				detalle := ""
+				if esAutoMesActual {
+					inicio, fin = rangoUltimosDias(year, m, 3)
+					detalle = " (ultimos 3 dias)"
+				}
+
+				totalDBF := ContarRegistrosDBF_Rango(store, year, inicio, fin, modo)
 				if totalDBF == 0 {
 					mu.Lock()
-					logInfo("CA: %s %s sin datos DBF", store.Codigo, MesesES[m])
+					logInfo("CA: %s %s sin datos DBF%s", store.Codigo, MesesES[m], detalle)
+					InsertarH_Tiendas(db, store.Codigo, year, m, 0, 0, 0, "SIN_DATOS", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					mu.Unlock()
 					continue
 				}
@@ -812,7 +987,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				CrearTablaPosVentasCA(dbCA, store.Codigo)
 
 				ctxCount, cancelCount := context.WithTimeout(context.Background(), 3*time.Minute)
-				totalSQL, errCnt := ContarTiendaMes_SQL(ctxCount, dbCA, store.Codigo, year, m)
+				totalSQL, errCnt := ContarTiendaRango_SQL(ctxCount, dbCA, store.Codigo, inicio, fin)
 				cancelCount()
 				dbCA.Close()
 
@@ -820,6 +995,50 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 					mu.Lock()
 					logError("CA: %s %s error contando SQL: %v", store.Codigo, MesesES[m], errCnt)
 					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					mu.Unlock()
+					continue
+				}
+
+				if esAutoMesActual {
+					dbCA2, err := ConectarSQL_CA(store.Codigo)
+					if err != nil {
+						mu.Lock()
+						logError("CA: %s %s FALLO conexion borrado rango: %v", store.Codigo, MesesES[m], err)
+						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+						mu.Unlock()
+						continue
+					}
+
+					ctxDel, cancelDel := context.WithTimeout(context.Background(), 3*time.Minute)
+					delErr := BorrarRangoTiendaCA(ctxDel, dbCA2, store.Codigo, inicio, fin)
+					cancelDel()
+					dbCA2.Close()
+
+					if delErr != nil {
+						mu.Lock()
+						logWarn("CA: %s %s error borrando rango: %v, continuando con insercion", store.Codigo, MesesES[m], delErr)
+						mu.Unlock()
+					}
+
+					var lastErr error
+					ok := false
+					for intento := 1; intento <= 3; intento++ {
+						err := ProcesarTiendaCA(store, year, m, inicio, fin, modo, 0, 0)
+						if err == nil || strings.Contains(err.Error(), "sin datos") {
+							ok = true
+							break
+						}
+						lastErr = err
+					}
+					mu.Lock()
+					if ok {
+						logInfo("CA: %s %s ultimos 3 dias OK (DBF=%d SQL=%d)", store.Codigo, MesesES[m], totalDBF, totalSQL)
+						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, totalDBF, "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					} else {
+						logError("CA: %s %s FALLO: %v", store.Codigo, MesesES[m], lastErr)
+						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+						erroresGlobal++
+					}
 					mu.Unlock()
 					continue
 				}
@@ -896,7 +1115,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 				}
 
 				for intento := 1; intento <= 3; intento++ {
-					err := ProcesarTiendaCA(store, year, m, modo, 0, 0)
+					err := ProcesarTiendaCA(store, year, m, primerDia, finMes, modo, 0, 0)
 					if err == nil || strings.Contains(err.Error(), "sin datos") {
 						ok = true
 						break

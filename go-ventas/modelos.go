@@ -99,8 +99,9 @@ type VentaCARegistro struct {
 }
 
 type tareaTienda struct {
-	idx int
-	suc Sucursal
+	idx      int
+	suc      Sucursal
+	sqlAntes int
 }
 
 var MesesES = map[int]string{

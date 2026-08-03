@@ -454,6 +454,16 @@ func ContarTiendaMes_SQL(ctx context.Context, db *sql.DB, codigo string, year, m
 	return count, err
 }
 
+func ContarTiendaRango_SQL(ctx context.Context, db *sql.DB, codigo string, inicio, fin time.Time) (int, error) {
+	var count int
+	tableName := "POS_CA_" + codigo
+	err := db.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+		codigo, inicio, fin,
+	).Scan(&count)
+	return count, err
+}
+
 func BorrarDatosTiendaCA(ctx context.Context, db *sql.DB, codigo string, year, month int) error {
 	tableName := "POS_CA_" + codigo
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
@@ -462,6 +472,24 @@ func BorrarDatosTiendaCA(ctx context.Context, db *sql.DB, codigo string, year, m
 		result, err := db.ExecContext(ctx,
 			fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
 			codigo, startDate, endDate,
+		)
+		if err != nil {
+			return err
+		}
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			break
+		}
+	}
+	return nil
+}
+
+func BorrarRangoTiendaCA(ctx context.Context, db *sql.DB, codigo string, inicio, fin time.Time) error {
+	tableName := "POS_CA_" + codigo
+	for {
+		result, err := db.ExecContext(ctx,
+			fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+			codigo, inicio, fin,
 		)
 		if err != nil {
 			return err
@@ -489,12 +517,52 @@ func CrearTablaH_Tiendas(db *sql.DB) error {
 			Estado          VARCHAR(20) NOT NULL,
 			DuracionSeg     INT NULL,
 			Modo            VARCHAR(10) NOT NULL,
-			TipoEjecucion   VARCHAR(20) NOT NULL
+			TipoEjecucion   VARCHAR(20) NOT NULL,
+			Sistema         VARCHAR(10) NULL
 		)
 	`)
 	if err != nil {
 		return err
 	}
+
+	_, err = db.Exec(`
+		IF (SELECT COLUMNPROPERTY(OBJECT_ID('H_Tiendas'),'Id','IsIdentity')) = 0
+		BEGIN
+			IF OBJECT_ID('dbo.H_Tiendas_New','U') IS NOT NULL
+			DROP TABLE dbo.H_Tiendas_New;
+
+			CREATE TABLE dbo.H_Tiendas_New (
+				Id              INT IDENTITY(1,1) PRIMARY KEY,
+				FechaEjecucion  DATETIME NOT NULL DEFAULT GETDATE(),
+				Tienda          VARCHAR(6) NOT NULL,
+				Anio            INT NOT NULL,
+				Mes             INT NOT NULL,
+				RegistrosDBF    INT NOT NULL DEFAULT 0,
+				RegistrosSQL    INT NOT NULL DEFAULT 0,
+				Insertados      INT NOT NULL DEFAULT 0,
+				Estado          VARCHAR(20) NOT NULL,
+				DuracionSeg     INT NULL,
+				Modo            VARCHAR(10) NOT NULL,
+				TipoEjecucion   VARCHAR(20) NOT NULL,
+				Sistema         VARCHAR(10) NULL
+			);
+
+			SET IDENTITY_INSERT dbo.H_Tiendas_New ON;
+			INSERT INTO dbo.H_Tiendas_New (Id, FechaEjecucion, Tienda, Anio, Mes, RegistrosDBF, RegistrosSQL, Insertados, Estado, DuracionSeg, Modo, TipoEjecucion, Sistema)
+			SELECT Id, FechaEjecucion, Tienda, Anio, Mes, RegistrosDBF, RegistrosSQL, Insertados, Estado, DuracionSeg, Modo, TipoEjecucion, Sistema FROM dbo.H_Tiendas;
+			SET IDENTITY_INSERT dbo.H_Tiendas_New OFF;
+
+			DROP TABLE dbo.H_Tiendas;
+			EXEC sp_rename N'dbo.H_Tiendas_New', N'H_Tiendas';
+
+			IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('H_Tiendas') AND name = 'IX_H_Tiendas_Busqueda')
+			CREATE NONCLUSTERED INDEX IX_H_Tiendas_Busqueda ON H_Tiendas(Tienda, Anio, Mes)
+		END
+	`)
+	if err != nil {
+		return err
+	}
+
 	_, err = db.Exec(`
 		IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('H_Tiendas') AND name = 'Sistema')
 		ALTER TABLE H_Tiendas ADD Sistema VARCHAR(10) NULL
@@ -508,6 +576,9 @@ func InsertarH_Tiendas(db *sql.DB, tienda string, anio, mes int, registrosDBF, r
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		tienda, anio, mes, registrosDBF, registrosSQL, insertados, estado, duracionSeg, modo, tipoEjecucion, sistema,
 	)
+	if err != nil {
+		logError("H_Tiendas insert fallo (%s %s %d): %v", sistema, tienda, anio, err)
+	}
 	return err
 }
 

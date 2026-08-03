@@ -6,6 +6,6 @@ set ANIO=%datetime:~0,4%
 if "%MES:~0,1%"=="0" set MES=%MES:~1,1%
 
 echo [%date% %time%] Iniciando...
-"C:\Users\Administrador\Desktop\Reportes FA\go-ventas\ventas_mensuales.exe" --auto --month=%MES% --year=%ANIO% --mode=IP
-echo [%date% %time%] Completado.
-pause
+"C:\Users\Administrador\Desktop\go-ventas\ventas_mensuales.exe" --auto --month=%MES% --year=%ANIO% --mode=IP
+	echo [%date% %time%] Completado.
+	pause

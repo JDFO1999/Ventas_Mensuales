@@ -377,61 +377,53 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 	tStart := time.Now()
 
 	CrearTablaPosVentas(db)
+	CrearTablaH_Tiendas(db)
 
 	dataSQL, err := LeerDatosDesdeSQL(db, anio, mes)
 	if err != nil {
 		dataSQL = make(map[string]map[int]VentaPorHora)
-	}
-	if len(dataSQL) > 0 {
-		fmt.Printf("  %d tiendas con datos en SQL (se saltara DBF)\n", len(dataSQL))
 	}
 
 	total := len(sucursales)
 	resultados := make([]ResultadoTienda, total)
 	var tasks []tareaTienda
 
+	// Releer el DBF de TODAS las tiendas y reconciliar con SQL
 	for i, s := range sucursales {
-		codigo := s.Codigo
-		tiendaLetra := strings.ToUpper(string(codigo[0]))
-
-		if tiendaData, ok := dataSQL[codigo]; ok {
-			conteo := make(map[int]int)
-			totalV := 0.0
-			clientes := 0
-			for h, v := range tiendaData {
-				conteo[h] = v.Facturas
-				totalV += v.TotalUSD
-				clientes += v.Facturas
-			}
-			promedio := 0.0
-			if clientes > 0 {
-				promedio = totalV / float64(clientes)
-			}
-			hmKey, cm := maxKey(conteo)
-			hmiKey, cmi := minKey(conteo)
-
-			fmt.Printf("\n[%d/%d] %s - %s", i+1, total, codigo, s.Nombre)
-			if clientes > 0 {
-				fmt.Printf("\n  SQL: %d facts | Total: $%.2f | Pico: %s (%d)\n",
-					clientes, totalV, formatoHora(hmKey), cm)
-			}
-			resultados[i] = ResultadoTienda{
-				Tienda: tiendaLetra, PromedioFactura: promedio,
-				Clientes: clientes, Total: totalV,
-				HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
-				HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
-			}
-		} else {
-			tasks = append(tasks, tareaTienda{idx: i, suc: s})
-		}
+		sqlAntes, _ := ContarFASQL(db, s.Codigo, anio, mes)
+		tasks = append(tasks, tareaTienda{idx: i, suc: s, sqlAntes: sqlAntes})
 	}
 
 	if len(tasks) > 0 {
 		dbfResultados := procesarConReintentos(tasks, total, db, anio, mes, modo, true)
-		for i, r := range dbfResultados {
-			if r.Clientes > 0 || r.Tienda != "" {
-				resultados[i] = r
+		for _, t := range tasks {
+			r := dbfResultados[t.idx]
+			if r.Clientes == 0 && r.Tienda == "" {
+				InsertarH_Tiendas(db, t.suc.Codigo, anio, mes, 0, t.sqlAntes, 0, "SIN_DATOS", 0, modo, "MANUAL", "FA")
+				if tiendaData, ok := dataSQL[t.suc.Codigo]; ok {
+					resultados[t.idx] = resultadoDesdeSQL(tiendaData, t.suc.Codigo)
+				}
+				continue
 			}
+
+			resultados[t.idx] = r
+
+			sqlDespues, errCnt := ContarFASQL(db, t.suc.Codigo, anio, mes)
+			if errCnt != nil {
+				InsertarH_Tiendas(db, t.suc.Codigo, anio, mes, r.Clientes, t.sqlAntes, 0, "ERROR", 0, modo, "MANUAL", "FA")
+				continue
+			}
+			insertados := sqlDespues - t.sqlAntes
+			if insertados < 0 {
+				insertados = 0
+			}
+			estado := "SALTADO"
+			if insertados > 0 {
+				estado = "OK"
+			}
+			InsertarH_Tiendas(db, t.suc.Codigo, anio, mes, r.Clientes, t.sqlAntes, insertados, estado, 0, modo, "MANUAL", "FA")
+			fmt.Printf("\n  %s: DBF %d facts | $%.2f | SQL %d | nuevas %d | %s",
+				t.suc.Codigo, r.Clientes, r.Total, sqlDespues, insertados, estado)
 		}
 	}
 
@@ -454,6 +446,29 @@ func procesarNormal(db *sql.DB, sucursales []Sucursal, anio, mes int, modo strin
 	fmt.Printf("Tiempo total: %.1f minutos.\n", time.Since(tStart).Minutes())
 	fmt.Print("\nPresione Enter para salir...")
 	leerLinea()
+}
+
+func resultadoDesdeSQL(tiendaData map[int]VentaPorHora, codigo string) ResultadoTienda {
+	conteo := make(map[int]int)
+	totalV := 0.0
+	clientes := 0
+	for h, v := range tiendaData {
+		conteo[h] = v.Facturas
+		totalV += v.TotalUSD
+		clientes += v.Facturas
+	}
+	promedio := 0.0
+	if clientes > 0 {
+		promedio = totalV / float64(clientes)
+	}
+	hmKey, cm := maxKey(conteo)
+	hmiKey, cmi := minKey(conteo)
+	return ResultadoTienda{
+		Tienda: strings.ToUpper(string(codigo[0])), PromedioFactura: promedio,
+		Clientes: clientes, Total: totalV,
+		HoraMayor: formatoHora(hmKey), ClientesMayor: cm,
+		HoraMenor: formatoHora(hmiKey), ClientesMenor: cmi,
+	}
 }
 
 func menuCA() {

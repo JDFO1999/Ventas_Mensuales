@@ -204,34 +204,31 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 	}
 
 	CrearTablaPosVentas(db)
+	CrearTablaH_Tiendas(db)
 
 	total := len(sucursales)
 	procesadas := 0
 	saltadas := 0
+	sinDatos := 0
 	var tasks []tareaTienda
-	type tiendaInfo struct {
-		totalSQL int
-	}
-	info := make(map[string]tiendaInfo)
 
 	for i, s := range sucursales {
 		mStart := time.Now()
-		totalSQL, errCnt := ContarFASQL(db, s.Codigo, year, month)
+		if !tieneDatosFA(s, year, cfg.Modo) {
+			InsertarH_Tiendas(db, s.Codigo, year, month, 0, 0, 0, "SIN_DATOS", int(time.Since(mStart).Seconds()), cfg.Modo, tipoEjecucion, "FA")
+			fmt.Printf("  %s: sin datos DBF\n", s.Codigo)
+			sinDatos++
+			continue
+		}
+
+		sqlAntes, errCnt := ContarFASQL(db, s.Codigo, year, month)
 		if errCnt != nil {
 			InsertarH_Tiendas(db, s.Codigo, year, month, 0, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), cfg.Modo, tipoEjecucion, "FA")
 			fmt.Printf("  %s: ERROR contando SQL: %v\n", s.Codigo, errCnt)
 			continue
 		}
 
-		if totalSQL > 0 {
-			InsertarH_Tiendas(db, s.Codigo, year, month, 0, totalSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), cfg.Modo, tipoEjecucion, "FA")
-			fmt.Printf("  %s: SALTADO (%d regs)\n", s.Codigo, totalSQL)
-			saltadas++
-			continue
-		}
-
-		info[s.Codigo] = tiendaInfo{totalSQL}
-		tasks = append(tasks, tareaTienda{idx: i, suc: s})
+		tasks = append(tasks, tareaTienda{idx: i, suc: s, sqlAntes: sqlAntes})
 		procesadas++
 	}
 
@@ -240,16 +237,34 @@ func procesarAutomatico(year, month int, cfg Config, conProgreso bool, headless 
 		dbfResultados := procesarConReintentos(tasks, total, db, year, month, cfg.Modo, conProgreso)
 		for _, t := range tasks {
 			r := dbfResultados[t.idx]
-			if r.Clientes > 0 || r.Tienda != "" {
-				InsertarH_Tiendas(db, t.suc.Codigo, year, month, 0, 0, 0, "OK", 0, cfg.Modo, tipoEjecucion, "FA")
-			} else {
-				InsertarH_Tiendas(db, t.suc.Codigo, year, month, 0, 0, 0, "ERROR", 0, cfg.Modo, tipoEjecucion, "FA")
+			if r.Clientes == 0 && r.Tienda == "" {
+				InsertarH_Tiendas(db, t.suc.Codigo, year, month, 0, t.sqlAntes, 0, "ERROR", 0, cfg.Modo, tipoEjecucion, "FA")
+				continue
+			}
+			sqlDespues, errCnt := ContarFASQL(db, t.suc.Codigo, year, month)
+			if errCnt != nil {
+				InsertarH_Tiendas(db, t.suc.Codigo, year, month, r.Clientes, t.sqlAntes, 0, "ERROR", 0, cfg.Modo, tipoEjecucion, "FA")
+				continue
+			}
+			insertados := sqlDespues - t.sqlAntes
+			if insertados < 0 {
+				insertados = 0
+			}
+			estado := "SALTADO"
+			if insertados > 0 {
+				estado = "OK"
+			}
+			InsertarH_Tiendas(db, t.suc.Codigo, year, month, r.Clientes, t.sqlAntes, insertados, estado, 0, cfg.Modo, tipoEjecucion, "FA")
+			fmt.Printf("  %s: DBF %d facts | $%.2f | SQL %d | nuevas %d | %s\n",
+				t.suc.Codigo, r.Clientes, r.Total, sqlDespues, insertados, estado)
+			if insertados > 0 {
+				saltadas++
 			}
 		}
 	}
 
-	if procesadas == 0 && saltadas > 0 {
-		fmt.Printf("  Todas las tiendas SALTADAS (%d)\n", saltadas)
+	if procesadas == 0 && (saltadas > 0 || sinDatos > 0) {
+		fmt.Printf("  Sin procesar: %d tiendas, %d sin datos DBF\n", saltadas, sinDatos)
 	}
 
 	fmt.Printf("[%s] Leyendo datos completos de SQL...\n", time.Now().Format("15:04:05"))
@@ -339,6 +354,8 @@ func procesarAutomaticoCA(year, month int, cfg Config, headless bool) {
 			if r := recover(); r != nil {
 				fmt.Printf("\n  *** PANIC CA: %v ***\n", r)
 			}
+			fmt.Print("\nPresione Enter para salir...")
+			leerLinea()
 		}()
 	}
 
