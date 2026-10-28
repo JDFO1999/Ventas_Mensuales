@@ -204,9 +204,15 @@ func ProcesarTienda(sucursal Sucursal, db *sql.DB, year, month int, modo string,
 			if modo == "S" && sucursal.RutaIP != "" {
 				fmt.Printf("\n  %s: S fallo, intentando IP...", codigo)
 				posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+				if err == nil {
+					modo = "IP"
+				}
 			} else if modo == "IP" {
 				fmt.Printf("\n  %s: IP fallo, intentando S...", codigo)
 				posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+				if err == nil {
+					modo = "S"
+				}
 			}
 		}
 		if err != nil {
@@ -222,6 +228,7 @@ func ProcesarTienda(sucursal Sucursal, db *sql.DB, year, month int, modo string,
 		ventasCombinadas := make(map[int]float64)
 		conteoCombinado := make(map[int]int)
 		cajasProcesadas := 0
+		dbfKeys := make(map[string]bool)
 
 		for _, dirName := range posDirs {
 			posNum, err := strconv.Atoi(dirName[3:])
@@ -270,6 +277,10 @@ func ProcesarTienda(sucursal Sucursal, db *sql.DB, year, month int, modo string,
 
 			// Guardar este POS inmediatamente (si falla, los demas ya estan salvados)
 			if len(regs) > 0 {
+				for _, r := range regs {
+					key := fmt.Sprintf("%d|%s|%s", r.Caja, r.Numero, r.Tipo)
+					dbfKeys[key] = true
+				}
 				InsertarVentas(db, regs)
 			}
 
@@ -280,6 +291,16 @@ func ProcesarTienda(sucursal Sucursal, db *sql.DB, year, month int, modo string,
 			fmt.Printf("\n  [%s] (%d facts, $%.0f, %.1f MB, %.1fs)",
 				filepath.Base(dbfPath), totalFacturas,
 				sumVentas(vph), fileSize, tFileElapsed.Seconds())
+		}
+
+		// Reconciliar: eliminar registros en SQL que no estan en DBF
+		if len(dbfKeys) > 0 {
+			eliminados, err := ReconciliarPosVentas(db, codigo, year, month, dbfKeys)
+			if err != nil {
+				logError("FA: error reconciliando %s: %v", codigo, err)
+			} else if eliminados > 0 {
+				fmt.Printf("\n  %s: %d registros huerfanos eliminados (no estan en DBF)", codigo, eliminados)
+			}
 		}
 
 		_ = cajasProcesadas
@@ -385,9 +406,10 @@ func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, mon
 		var wg sync.WaitGroup
 
 		type storeRes struct {
-			tt    tareaTienda
-			res   ResultadoTienda
-			fallo bool
+			tt      tareaTienda
+			res     ResultadoTienda
+			fallo   bool
+			timeout bool
 		}
 		resultChan := make(chan storeRes, len(pendientes))
 
@@ -414,9 +436,9 @@ func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, mon
 					} else {
 						resultChan <- storeRes{tt: tt, res: msg.Resultado}
 					}
-				case <-time.After(30 * time.Minute):
-					fmt.Printf("\n  [%d/%d] %s - TIMEOUT\n", tt.idx+1, total, tt.suc.Codigo)
-					resultChan <- storeRes{tt: tt, fallo: true}
+				case <-time.After(5 * time.Minute):
+					fmt.Printf("\n  [%d/%d] %s - TIMEOUT (5 min)\n", tt.idx+1, total, tt.suc.Codigo)
+					resultChan <- storeRes{tt: tt, fallo: true, timeout: true}
 				}
 			}(t)
 		}
@@ -426,7 +448,11 @@ func procesarConReintentos(tasks []tareaTienda, total int, db *sql.DB, year, mon
 
 		for msg := range resultChan {
 			if msg.fallo {
-				nuevosPendientes = append(nuevosPendientes, msg.tt)
+				if !msg.timeout {
+					nuevosPendientes = append(nuevosPendientes, msg.tt)
+				} else {
+					fmt.Printf("  %s - TIMEOUT, no se reintentara (problema de red)\n", msg.tt.suc.Codigo)
+				}
 			} else {
 				resultados[msg.tt.idx] = msg.res
 				if conProgreso && msg.res.Clientes > 0 {
@@ -469,6 +495,17 @@ func leerArchivoCARango(filepathCA string, year int, inicio, fin time.Time, tien
 	}
 	defer dbf.Close()
 
+	if dbf.NumRecords == 0 {
+		return nil, nil
+	}
+
+	diai := dbf.FieldIndex("DIA")
+	mesi := dbf.FieldIndex("MES")
+	anioi := dbf.FieldIndex("ANIO")
+	if diai < 0 || mesi < 0 || anioi < 0 {
+		return nil, fmt.Errorf("campos DIA/MES/ANIO no encontrados (DIA=%d MES=%d ANIO=%d)", diai, mesi, anioi)
+	}
+
 	var registros []VentaCARegistro
 
 	for i := 0; i < dbf.NumRecords; i++ {
@@ -488,13 +525,6 @@ func leerArchivoCARango(filepathCA string, year int, inicio, fin time.Time, tien
 
 		ai := dbf.FieldIndex("ANULADA")
 		if ai >= 0 && dbf.GetString(rec, dbf.Fields[ai]) == "T" {
-			continue
-		}
-
-		diai := dbf.FieldIndex("DIA")
-		mesi := dbf.FieldIndex("MES")
-		anioi := dbf.FieldIndex("ANIO")
-		if diai < 0 || mesi < 0 || anioi < 0 {
 			continue
 		}
 
@@ -672,6 +702,9 @@ func contarRegistrosCARango(dbfPath string, year int, inicio, fin time.Time) (in
 	mesi := dbf.FieldIndex("MES")
 	anioi := dbf.FieldIndex("ANIO")
 	if diai < 0 || mesi < 0 || anioi < 0 {
+		return 0, fmt.Errorf("campos DIA/MES/ANIO no encontrados")
+	}
+	if dbf.NumRecords == 0 {
 		return 0, nil
 	}
 
@@ -837,8 +870,9 @@ func ContarRegistrosDBF_FA(sucursal Sucursal, year, month int, modo string) int 
 	return total
 }
 
-func ProcesarTiendaCA(sucursal Sucursal, year, month int, inicio, fin time.Time, modo string, idx, total int) error {
+func ProcesarTiendaCA(sucursal Sucursal, year, month int, inicio, fin time.Time, modo string, idx, total int, forceReload ...bool) error {
 	codigo := sucursal.Codigo
+	force := len(forceReload) > 0 && forceReload[0]
 
 	dbCA, err := ConectarSQL_CA(codigo)
 	if err != nil {
@@ -870,6 +904,7 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, inicio, fin time.Time,
 	}
 
 	totalInsert := 0
+	var fallidos []string
 	for _, dirName := range posDirs {
 		posNum, err := strconv.Atoi(dirName[3:])
 		if err != nil {
@@ -894,29 +929,59 @@ func ProcesarTiendaCA(sucursal Sucursal, year, month int, inicio, fin time.Time,
 			continue
 		}
 
-		tStart := time.Now()
-		sizeMB := float64(info.Size()) / (1024 * 1024)
-		fmt.Printf("\r  %s", pfx("%s  [%s] %.1f MB leyendo...", codigo, filepath.Base(dbfPath), sizeMB))
+		posOK := false
+		for intentoPOS := 1; intentoPOS <= 3; intentoPOS++ {
+			if intentoPOS > 1 {
+				time.Sleep(time.Duration(intentoPOS) * time.Second)
+			}
 
-		regs, err := leerArchivoCARango(dbfPath, year, inicio, fin, codigo, posNum)
-		tElapsed := time.Since(tStart)
+			tStart := time.Now()
+			sizeMB := float64(info.Size()) / (1024 * 1024)
+			fmt.Printf("\r  %s", pfx("%s  [%s] %.1f MB leyendo... (intento %d/3)", codigo, filepath.Base(dbfPath), sizeMB, intentoPOS))
 
-		if err != nil || len(regs) == 0 {
-			continue
+			regs, err := leerArchivoCARango(dbfPath, year, inicio, fin, codigo, posNum)
+			tElapsed := time.Since(tStart)
+
+			if err != nil {
+				if intentoPOS == 3 {
+					fmt.Printf("\n  %s", pfx("%s  [%s] ERROR: %v", codigo, filepath.Base(dbfPath), err))
+				}
+				continue
+			}
+
+			if len(regs) == 0 {
+				if intentoPOS == 3 {
+					if info.Size() == 0 {
+						fmt.Printf("\n  %s", pfx("%s  [%s] archivo vacio, saltando", codigo, filepath.Base(dbfPath)))
+					} else {
+						fmt.Printf("\n  %s", pfx("%s  [%s] 0 regs en rango, saltando", codigo, filepath.Base(dbfPath)))
+					}
+				}
+				posOK = true
+				break
+			}
+
+			fmt.Printf("\r  %s", pfx("%s  [%s] %d regs insertando... (intento %d/3)", codigo, filepath.Base(dbfPath), len(regs), intentoPOS))
+			if err := InsertarVentasCA_Incremental(dbCA, regs, codigo, year, month, force); err != nil {
+				fmt.Printf("\n  %s", pfx("%s  [%s] ERROR insert intento %d: %v", codigo, filepath.Base(dbfPath), intentoPOS, err))
+				continue
+			}
+			totalInsert += len(regs)
+			fmt.Printf("\n  %s", pfx("%s  [%s] %d regs, %.1fs", codigo, filepath.Base(dbfPath), len(regs), tElapsed.Seconds()))
+			posOK = true
+			break
 		}
 
-		fmt.Printf("\r  %s", pfx("%s  [%s] %d regs insertando...", codigo, filepath.Base(dbfPath), len(regs)))
-		if err := InsertarVentasCA_Incremental(dbCA, regs, codigo, year, month); err != nil {
-			fmt.Printf("\n  %s", pfx("%s  [%s] ERROR insert: %v", codigo, filepath.Base(dbfPath), err))
-			continue
+		if !posOK {
+			fallidos = append(fallidos, filepath.Base(dbfPath))
 		}
-		totalInsert += len(regs)
-
-		fmt.Printf("\n  %s", pfx("%s  [%s] %d regs, %.1fs", codigo, filepath.Base(dbfPath), len(regs), tElapsed.Seconds()))
 	}
 
 	if totalInsert == 0 {
 		return fmt.Errorf("sin datos")
+	}
+	if len(fallidos) > 0 {
+		return fmt.Errorf("POS fallidos: %s", strings.Join(fallidos, ", "))
 	}
 	return nil
 }
@@ -939,7 +1004,7 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 	var wg sync.WaitGroup
 	erroresGlobal := 0
 	var mu sync.Mutex
-	sem := make(chan struct{}, 6)
+	sem := make(chan struct{}, 2)
 
 	for _, s := range sucursales {
 		sem <- struct{}{}
@@ -956,188 +1021,129 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 			for m := mesInicio; m <= mesFin; m++ {
 				mStart := time.Now()
 
-				esAutoMesActual := tipoEjecucion == "AUTOMATICO" && m == int(time.Now().Month())
-
 				primerDia := time.Date(year, time.Month(m), 1, 0, 0, 0, 0, time.UTC)
 				finMes := primerDia.AddDate(0, 1, 0)
 				inicio, fin := primerDia, finMes
-				detalle := ""
-				if esAutoMesActual {
-					inicio, fin = rangoUltimosDias(year, m, 3)
-					detalle = " (ultimos 3 dias)"
+
+				// PASO 1: Leer todos los DBFs del mes en memoria
+				fmt.Printf("\r  %s  %s Leyendo DBFs...", store.Codigo, MesesES[m])
+				todosRegs, errDBF := LeerDBFRangoCompleto(store, year, inicio, fin, modo)
+				if errDBF != nil {
+					mu.Lock()
+					logError("CA: %s %s error leyendo DBFs: %v", store.Codigo, MesesES[m], errDBF)
+					InsertarH_Tiendas(db, store.Codigo, year, m, 0, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
 				}
 
-				totalDBF := ContarRegistrosDBF_Rango(store, year, inicio, fin, modo)
+				totalDBF := len(todosRegs)
 				if totalDBF == 0 {
 					mu.Lock()
-					logInfo("CA: %s %s sin datos DBF%s", store.Codigo, MesesES[m], detalle)
+					logInfo("CA: %s %s sin datos DBF", store.Codigo, MesesES[m])
 					InsertarH_Tiendas(db, store.Codigo, year, m, 0, 0, 0, "SIN_DATOS", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					mu.Unlock()
 					continue
 				}
 
+				fmt.Printf("\r  %s  %s DBF: %d registros            \n", store.Codigo, MesesES[m], totalDBF)
+
+				// PASO 2: Conectar, crear tabla y staging
 				dbCA, err := ConectarSQL_CA(store.Codigo)
 				if err != nil {
 					mu.Lock()
 					logError("CA: %s %s FALLO conexion: %v", store.Codigo, MesesES[m], err)
 					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					erroresGlobal++
 					mu.Unlock()
 					continue
 				}
 				CrearTablaPosVentasCA(dbCA, store.Codigo)
+				CrearTablaStagingCA(dbCA, store.Codigo)
 
-				ctxCount, cancelCount := context.WithTimeout(context.Background(), 3*time.Minute)
-				totalSQL, errCnt := ContarTiendaRango_SQL(ctxCount, dbCA, store.Codigo, inicio, fin)
-				cancelCount()
+				// PASO 3: Cargar datos del DBF en staging
+				fmt.Printf("  %s  %s Cargando %d registros en staging...\n", store.Codigo, MesesES[m], totalDBF)
+				if err := CargarDBFEnStaging(dbCA, todosRegs, store.Codigo); err != nil {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logError("CA: %s %s error staging: %v", store.Codigo, MesesES[m], err)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				// PASO 4: Comparar staging vs SQL
+				iguales, countSQL, _, errComp := CompararStagingConSQL(dbCA, store.Codigo, inicio, fin)
+				if errComp != nil {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logError("CA: %s %s error comparando: %v", store.Codigo, MesesES[m], errComp)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				if iguales {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logInfo("CA: %s %s OK (%d regs, sin cambios)", store.Codigo, MesesES[m], countSQL)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, countSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					mu.Unlock()
+					continue
+				}
+
+				// PASO 5: Borrar datos actuales en batches de 5000
+				fmt.Printf("  %s  %s Borrando %d registros actuales...\n", store.Codigo, MesesES[m], countSQL)
+				ctxDel, cancelDel := context.WithTimeout(context.Background(), 60*time.Minute)
+				borrados, delErr := BorrarRangoEnBatches(ctxDel, dbCA, store.Codigo, inicio, fin)
+				cancelDel()
+
+				if delErr != nil {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logError("CA: %s %s DELETE fallo: %v", store.Codigo, MesesES[m], delErr)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, countSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+				fmt.Printf("  %s  %s Borrados %d registros\n", store.Codigo, MesesES[m], borrados)
+
+				// PASO 6: Copiar staging a tabla principal
+				ctxCopy, cancelCopy := context.WithTimeout(context.Background(), 30*time.Minute)
+				copiados, errCopy := CopiarStagingATable(ctxCopy, dbCA, store.Codigo)
+				cancelCopy()
+				LimpiarStaging(dbCA, store.Codigo)
+
+				if errCopy != nil {
+					dbCA.Close()
+					mu.Lock()
+					logError("CA: %s %s COPY fallo: %v", store.Codigo, MesesES[m], errCopy)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, countSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				// PASO 7: Verificar resultado final
+				ctxVer, cancelVer := context.WithTimeout(context.Background(), 10*time.Minute)
+				finalCount, _ := ContarTiendaRango_SQL(ctxVer, dbCA, store.Codigo, inicio, fin)
+				cancelVer()
 				dbCA.Close()
 
-				if errCnt != nil {
-					mu.Lock()
-					logError("CA: %s %s error contando SQL: %v", store.Codigo, MesesES[m], errCnt)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-					mu.Unlock()
-					continue
-				}
-
-				if esAutoMesActual {
-					dbCA2, err := ConectarSQL_CA(store.Codigo)
-					if err != nil {
-						mu.Lock()
-						logError("CA: %s %s FALLO conexion borrado rango: %v", store.Codigo, MesesES[m], err)
-						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-						mu.Unlock()
-						continue
-					}
-
-					ctxDel, cancelDel := context.WithTimeout(context.Background(), 3*time.Minute)
-					delErr := BorrarRangoTiendaCA(ctxDel, dbCA2, store.Codigo, inicio, fin)
-					cancelDel()
-					dbCA2.Close()
-
-					if delErr != nil {
-						mu.Lock()
-						logWarn("CA: %s %s error borrando rango: %v, continuando con insercion", store.Codigo, MesesES[m], delErr)
-						mu.Unlock()
-					}
-
-					var lastErr error
-					ok := false
-					for intento := 1; intento <= 3; intento++ {
-						err := ProcesarTiendaCA(store, year, m, inicio, fin, modo, 0, 0)
-						if err == nil || strings.Contains(err.Error(), "sin datos") {
-							ok = true
-							break
-						}
-						lastErr = err
-					}
-					mu.Lock()
-					if ok {
-						logInfo("CA: %s %s ultimos 3 dias OK (DBF=%d SQL=%d)", store.Codigo, MesesES[m], totalDBF, totalSQL)
-						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, totalDBF, "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-					} else {
-						logError("CA: %s %s FALLO: %v", store.Codigo, MesesES[m], lastErr)
-						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-						erroresGlobal++
-					}
-					mu.Unlock()
-					continue
-				}
-
-				if totalDBF == totalSQL {
-					mu.Lock()
-					logInfo("CA: %s %s OK (%d regs, saltado)", store.Codigo, MesesES[m], totalSQL)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-					mu.Unlock()
-					continue
-				}
-
-				var lastErr error
-				ok := false
-
-				if totalSQL > totalDBF {
-					dbCA2, err := ConectarSQL_CA(store.Codigo)
-					if err != nil {
-						mu.Lock()
-						logError("CA: %s %s FALLO conexion borrado: %v", store.Codigo, MesesES[m], err)
-						InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-						mu.Unlock()
-						continue
-					}
-
-					ctxDel, cancelDel := context.WithTimeout(context.Background(), 3*time.Minute)
-					err = BorrarDatosTiendaCA(ctxDel, dbCA2, store.Codigo, year, m)
-					cancelDel()
-
-					if err != nil {
-						dbCA2.Close()
-						mu.Lock()
-						logWarn("CA: %s %s error borrando: %v, verificando si se eliminaron registros...", store.Codigo, MesesES[m], err)
-						mu.Unlock()
-
-						dbCA3, errRecon := ConectarSQL_CA(store.Codigo)
-						if errRecon != nil {
-							mu.Lock()
-							logError("CA: %s %s FALLO reconexion verificacion: %v", store.Codigo, MesesES[m], errRecon)
-							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-							mu.Unlock()
-							continue
-						}
-
-						ctxVer, cancelVer := context.WithTimeout(context.Background(), 2*time.Minute)
-						nuevoCount, errCount := ContarTiendaMes_SQL(ctxVer, dbCA3, store.Codigo, year, m)
-						cancelVer()
-						dbCA3.Close()
-
-						if errCount != nil {
-							mu.Lock()
-							logError("CA: %s %s error verificando conteo: %v", store.Codigo, MesesES[m], errCount)
-							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-							mu.Unlock()
-							continue
-						}
-
-						if nuevoCount >= totalSQL {
-							mu.Lock()
-							logError("CA: %s %s el DELETE no se ejecuto (%d registros aun en BD)", store.Codigo, MesesES[m], nuevoCount)
-							InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
-							mu.Unlock()
-							continue
-						}
-
-						mu.Lock()
-						logWarn("CA: %s %s DELETE si se ejecuto a pesar del timeout (era %d, ahora %d), reinsertando...", store.Codigo, MesesES[m], totalSQL, nuevoCount)
-						mu.Unlock()
-						totalSQL = nuevoCount
-					} else {
-						dbCA2.Close()
-						logInfo("CA: %s %s SQL>DBF (%d>%d), borrado y reinsertando...", store.Codigo, MesesES[m], totalSQL, totalDBF)
-					}
-				}
-
-				for intento := 1; intento <= 3; intento++ {
-					err := ProcesarTiendaCA(store, year, m, primerDia, finMes, modo, 0, 0)
-					if err == nil || strings.Contains(err.Error(), "sin datos") {
-						ok = true
-						break
-					}
-					lastErr = err
-				}
 				mu.Lock()
-				if ok {
-					insertados := 0
-					if totalSQL > totalDBF {
-						insertados = totalDBF
-					} else {
-						insertados = totalDBF - totalSQL
-						if insertados < 0 {
-							insertados = 0
-						}
-					}
-					logInfo("CA: %s %s OK", store.Codigo, MesesES[m])
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, insertados, "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+				if finalCount == totalDBF {
+					logInfo("CA: %s %s OK (regs=%d, insertados=%d, %ds)", store.Codigo, MesesES[m], finalCount, int(copiados), int(time.Since(mStart).Seconds()))
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, finalCount, int(copiados), "OK", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 				} else {
-					logError("CA: %s %s FALLO: %v", store.Codigo, MesesES[m], lastErr)
-					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, totalSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
+					logWarn("CA: %s %s REVISAR (DBF=%d SQL=%d diferencia=%d)", store.Codigo, MesesES[m], totalDBF, finalCount, totalDBF-finalCount)
+					InsertarH_Tiendas(db, store.Codigo, year, m, totalDBF, finalCount, int(copiados), "REVISAR", int(time.Since(mStart).Seconds()), modo, tipoEjecucion, "CA")
 					erroresGlobal++
 				}
 				mu.Unlock()
@@ -1149,6 +1155,626 @@ func ProcesarCA(db *sql.DB, sucursales []Sucursal, year, mesInicio, mesFin int, 
 	fmt.Printf("\n  CA listo. Tiempo: %.1f min. (%d errores)\n", time.Since(tStart).Minutes(), erroresGlobal)
 	logInfo("CA: Completado en %.1f min, %d errores", time.Since(tStart).Minutes(), erroresGlobal)
 	return nil
+}
+
+func ProcesarCAFecha(db *sql.DB, sucursales []Sucursal, year int, inicio, fin time.Time, modo string) {
+	CrearTablaH_Tiendas(db)
+	logInfo("CA_FECHA: Iniciando %d tiendas, rango %s a %s, modo=%s", len(sucursales),
+		inicio.Format("02/01/2006"), fin.Format("02/01/2006"), modo)
+	tStart := time.Now()
+
+	var wg sync.WaitGroup
+	erroresGlobal := 0
+	var mu sync.Mutex
+	sem := make(chan struct{}, 2)
+
+	for _, s := range sucursales {
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(store Sucursal) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					logError("CA_FECHA: PANIC en %s: %v", store.Codigo, r)
+				}
+			}()
+
+			mStart := time.Now()
+
+			// PASO 1: Leer todos los DBFs del rango en memoria
+			fmt.Printf("\r  %s  Leyendo DBFs...", store.Codigo)
+			todosRegs, errDBF := LeerDBFRangoCompleto(store, year, inicio, fin, modo)
+			if errDBF != nil {
+				mu.Lock()
+				logError("CA_FECHA: %s error leyendo DBFs: %v", store.Codigo, errDBF)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), 0, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				erroresGlobal++
+				mu.Unlock()
+				return
+			}
+
+			totalDBF := len(todosRegs)
+			if totalDBF == 0 {
+				mu.Lock()
+				logInfo("CA_FECHA: %s sin datos DBF en rango", store.Codigo)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), 0, 0, 0, "SIN_DATOS", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				mu.Unlock()
+				return
+			}
+
+			fmt.Printf("\r  %s  DBF: %d registros en rango     \n", store.Codigo, totalDBF)
+
+			// PASO 2: Conectar, crear tabla y staging
+			dbCA, err := ConectarSQL_CA(store.Codigo)
+			if err != nil {
+				mu.Lock()
+				logError("CA_FECHA: %s FALLO conexion: %v", store.Codigo, err)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				erroresGlobal++
+				mu.Unlock()
+				return
+			}
+			CrearTablaPosVentasCA(dbCA, store.Codigo)
+			CrearTablaStagingCA(dbCA, store.Codigo)
+
+			// PASO 3: Cargar datos del DBF en staging
+			fmt.Printf("  %s  Cargando %d registros en staging...\n", store.Codigo, totalDBF)
+			if err := CargarDBFEnStaging(dbCA, todosRegs, store.Codigo); err != nil {
+				dbCA.Close()
+				LimpiarStaging(dbCA, store.Codigo)
+				mu.Lock()
+				logError("CA_FECHA: %s error cargando staging: %v", store.Codigo, err)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				erroresGlobal++
+				mu.Unlock()
+				return
+			}
+
+			// PASO 4: Comparar staging vs SQL
+			iguales, countSQL, countSTG, errComp := CompararStagingConSQL(dbCA, store.Codigo, inicio, fin)
+			if errComp != nil {
+				dbCA.Close()
+				LimpiarStaging(dbCA, store.Codigo)
+				mu.Lock()
+				logError("CA_FECHA: %s error comparando: %v", store.Codigo, errComp)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				erroresGlobal++
+				mu.Unlock()
+				return
+			}
+
+			if iguales {
+				dbCA.Close()
+				LimpiarStaging(dbCA, store.Codigo)
+				mu.Lock()
+				logInfo("CA_FECHA: %s OK (DBF=%d SQL=%d, sin cambios)", store.Codigo, totalDBF, countSQL)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, countSQL, 0, "SALTADO", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				mu.Unlock()
+				return
+			}
+
+			// PASO 5: Borrar datos actuales en batches de 5000
+			fmt.Printf("  %s  Borrando %d registros actuales...\n", store.Codigo, countSQL)
+			ctxDel, cancelDel := context.WithTimeout(context.Background(), 60*time.Minute)
+			borrados, delErr := BorrarRangoEnBatches(ctxDel, dbCA, store.Codigo, inicio, fin)
+			cancelDel()
+
+			if delErr != nil {
+				dbCA.Close()
+				LimpiarStaging(dbCA, store.Codigo)
+				mu.Lock()
+				logError("CA_FECHA: %s error borrando: %v", store.Codigo, delErr)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, countSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				erroresGlobal++
+				mu.Unlock()
+				return
+			}
+			fmt.Printf("  %s  Borrados %d registros\n", store.Codigo, borrados)
+
+			// PASO 6: Copiar staging a tabla principal
+			fmt.Printf("  %s  Copiando %d registros desde staging...\n", store.Codigo, countSTG)
+			ctxCopy, cancelCopy := context.WithTimeout(context.Background(), 30*time.Minute)
+			copiados, errCopy := CopiarStagingATable(ctxCopy, dbCA, store.Codigo)
+			cancelCopy()
+
+			// PASO 7: Limpiar staging siempre
+			LimpiarStaging(dbCA, store.Codigo)
+
+			if errCopy != nil {
+				dbCA.Close()
+				mu.Lock()
+				logError("CA_FECHA: %s error copiando staging: %v", store.Codigo, errCopy)
+				InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, countSQL, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+				erroresGlobal++
+				mu.Unlock()
+				return
+			}
+
+			// PASO 8: Verificar resultado final
+			ctxVer, cancelVer := context.WithTimeout(context.Background(), 10*time.Minute)
+			finalSQL, _ := ContarTiendaRango_SQL(ctxVer, dbCA, store.Codigo, inicio, fin)
+			cancelVer()
+			dbCA.Close()
+
+			estado := "OK"
+			if totalDBF != finalSQL {
+				estado = "REVISAR"
+				logWarn("CA_FECHA: %s REVISAR (DBF=%d SQL=%d diferencia=%d)", store.Codigo, totalDBF, finalSQL, totalDBF-finalSQL)
+			} else {
+				logInfo("CA_FECHA: %s OK (regs=%d, duracion=%ds)", store.Codigo, finalSQL, int(time.Since(mStart).Seconds()))
+			}
+
+			mu.Lock()
+			InsertarH_Tiendas(db, store.Codigo, year, int(inicio.Month()), totalDBF, finalSQL, int(copiados), estado, int(time.Since(mStart).Seconds()), modo, "MANUAL", "CA")
+			mu.Unlock()
+		}(s)
+	}
+
+	wg.Wait()
+	fmt.Printf("\n  CA Fecha listo. Tiempo: %.1f min. (%d errores)\n", time.Since(tStart).Minutes(), erroresGlobal)
+	logInfo("CA_FECHA: Completado en %.1f min, %d errores", time.Since(tStart).Minutes(), erroresGlobal)
+}
+
+func LeerDBFRangoCompleto(store Sucursal, year int, inicio, fin time.Time, modo string) ([]VentaCARegistro, error) {
+	posDirs, err := ListarPOS(store.Codigo, store.RutaIP, store.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && store.RutaIP != "" {
+			posDirs, err = ListarPOS(store.Codigo, store.RutaIP, store.RutaDBF, "IP")
+		} else if modo == "IP" {
+			posDirs, err = ListarPOS(store.Codigo, store.RutaIP, store.RutaDBF, "S")
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("FALLO ruta: %v", err)
+	}
+
+	var todosRegs []VentaCARegistro
+	for _, dirName := range posDirs {
+		posNum, errPos := strconv.Atoi(dirName[3:])
+		if errPos != nil {
+			continue
+		}
+
+		var posPath string
+		if modo == "S" {
+			if store.RutaDBF != "" {
+				posPath = strings.TrimRight(store.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", store.Codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", store.RutaIP, dirName)
+		}
+
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
+
+		if _, errStat := os.Stat(dbfPath); errStat != nil {
+			continue
+		}
+
+		for intento := 1; intento <= 3; intento++ {
+			if intento > 1 {
+				time.Sleep(time.Duration(intento) * time.Second)
+			}
+			regs, errLectura := leerArchivoCARango(dbfPath, year, inicio, fin, store.Codigo, posNum)
+			if errLectura != nil {
+				continue
+			}
+			if len(regs) > 0 {
+				todosRegs = append(todosRegs, regs...)
+			}
+			break
+		}
+	}
+	return todosRegs, nil
+}
+
+func CorregirDeptoFamilia(dbSistemas *sql.DB, tienda string) (int, int, error) {
+	tableName := "POS_CA_" + tienda
+
+	dbCA, err := ConectarSQL_CA(tienda)
+	if err != nil {
+		return 0, 0, fmt.Errorf("FALLO conexion: %v", err)
+	}
+	defer dbCA.Close()
+
+	var totalSinDepto int
+	err = dbCA.QueryRow(fmt.Sprintf(`
+		SELECT COUNT(*) FROM %s
+		WHERE (Depto IS NULL OR Depto = '') AND (Familia IS NULL OR Familia = '')
+	`, tableName)).Scan(&totalSinDepto)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error contando sin Depto: %v", err)
+	}
+	fmt.Printf("    Registros sin Depto/Familia: %d\n", totalSinDepto)
+
+	if totalSinDepto == 0 {
+		return 0, 0, nil
+	}
+
+	fmt.Println("    Paso 1: Buscando en misma tienda...")
+	var actualizados1 int
+	_, err = dbCA.Exec(fmt.Sprintf(`
+		UPDATE A SET
+			A.Depto = (
+				SELECT TOP 1 B.Depto FROM %s B
+				WHERE B.Codigo = A.Codigo
+					AND B.Depto IS NOT NULL AND B.Depto <> ''
+				ORDER BY B.Fecha DESC
+			),
+			A.Familia = (
+				SELECT TOP 1 B.Familia FROM %s B
+				WHERE B.Codigo = A.Codigo
+					AND B.Familia IS NOT NULL AND B.Familia <> ''
+				ORDER BY B.Fecha DESC
+			)
+		FROM %s A
+		WHERE (A.Depto IS NULL OR A.Depto = '')
+			AND EXISTS (
+				SELECT 1 FROM %s B
+				WHERE B.Codigo = A.Codigo
+					AND (B.Depto IS NOT NULL AND B.Depto <> '')
+			)
+	`, tableName, tableName, tableName, tableName))
+	if err != nil {
+		return 0, 0, fmt.Errorf("error paso 1: %v", err)
+	}
+	dbCA.QueryRow(fmt.Sprintf(`
+		SELECT COUNT(*) FROM %s
+		WHERE (Depto IS NULL OR Depto = '') AND (Familia IS NULL OR Familia = '')
+	`, tableName)).Scan(&actualizados1)
+	actualizados1 = totalSinDepto - actualizados1
+	fmt.Printf("    Paso 1: %d actualizados\n", actualizados1)
+
+	var pendientes int
+	dbCA.QueryRow(fmt.Sprintf(`
+		SELECT COUNT(DISTINCT Codigo) FROM %s
+		WHERE (Depto IS NULL OR Depto = '') AND (Familia IS NULL OR Familia = '')
+	`, tableName)).Scan(&pendientes)
+
+	if pendientes == 0 {
+		fmt.Println("    Todos los productos tienen Depto/Familia.")
+		return actualizados1, 0, nil
+	}
+
+	fmt.Printf("    Paso 2: Buscando en otras tiendas (%d productos pendientes)...\n", pendientes)
+
+	rows, err := dbCA.Query(fmt.Sprintf(`
+		SELECT DISTINCT Codigo FROM %s
+		WHERE (Depto IS NULL OR Depto = '') AND (Familia IS NULL OR Familia = '')
+	`, tableName))
+	if err != nil {
+		return actualizados1, pendientes, nil
+	}
+	defer rows.Close()
+
+	type mapEntry struct {
+		Depto   string
+		Familia string
+	}
+	mappings := make(map[string]mapEntry)
+
+	tablesQuery := `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'POS_CA_%' AND TABLE_NAME <> @p1 ORDER BY TABLE_NAME`
+	allTables, err := dbCA.Query(tablesQuery, tableName)
+	if err == nil {
+		defer allTables.Close()
+		var otherTables []string
+		for allTables.Next() {
+			var t string
+			if allTables.Scan(&t) == nil {
+				otherTables = append(otherTables, t)
+			}
+		}
+
+		for rows.Next() {
+			var codigo string
+			if rows.Scan(&codigo) != nil {
+				continue
+			}
+			for _, otherTable := range otherTables {
+				var d, f string
+				errQ := dbCA.QueryRow(fmt.Sprintf(`
+					SELECT TOP 1 Depto, Familia FROM %s
+					WHERE Codigo = @p1
+						AND Depto IS NOT NULL AND Depto <> ''
+						AND Familia IS NOT NULL AND Familia <> ''
+					ORDER BY Fecha DESC
+				`, otherTable), codigo).Scan(&d, &f)
+				if errQ == nil && d != "" && f != "" {
+					mappings[codigo] = mapEntry{Depto: d, Familia: f}
+					break
+				}
+			}
+		}
+	}
+
+	actualizados2 := 0
+	for codigo, m := range mappings {
+		res, err := dbCA.Exec(fmt.Sprintf(`
+			UPDATE %s SET Depto = @p1, Familia = @p2
+			WHERE Codigo = @p3
+				AND (Depto IS NULL OR Depto = '')
+		`, tableName), m.Depto, m.Familia, codigo)
+		if err == nil {
+			n, _ := res.RowsAffected()
+			actualizados2 += int(n)
+		}
+	}
+	fmt.Printf("    Paso 2: %d actualizados desde otras tiendas\n", actualizados2)
+
+	var pendientesFinal int
+	dbCA.QueryRow(fmt.Sprintf(`
+		SELECT COUNT(DISTINCT Codigo) FROM %s
+		WHERE (Depto IS NULL OR Depto = '') AND (Familia IS NULL OR Familia = '')
+	`, tableName)).Scan(&pendientesFinal)
+
+	if pendientesFinal > 0 {
+		fmt.Printf("    Productos sin mapeo (%d):\n", pendientesFinal)
+		sinMapeo, err := dbCA.Query(fmt.Sprintf(`
+			SELECT TOP 20 Codigo, Descrip FROM %s
+			WHERE (Depto IS NULL OR Depto = '') AND (Familia IS NULL OR Familia = '')
+			GROUP BY Codigo, Descrip
+		`, tableName))
+		if err == nil {
+			defer sinMapeo.Close()
+			for sinMapeo.Next() {
+				var cod, desc string
+				if sinMapeo.Scan(&cod, &desc) == nil {
+					fmt.Printf("      %s - %s\n", cod, desc)
+				}
+			}
+		}
+	}
+
+	return actualizados1 + actualizados2, pendientesFinal, nil
+}
+
+func ContarDBFPorDia(sucursal Sucursal, year, month, day int, modo string) int {
+	inicio := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	fin := inicio.AddDate(0, 0, 1)
+	return ContarRegistrosDBF_Rango(sucursal, year, inicio, fin, modo)
+}
+
+func CargarDBFDia(dbCA *sql.DB, sucursal Sucursal, year, month, day int, modo string, forceReload bool) (int, error) {
+	codigo := sucursal.Codigo
+	inicio := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	fin := inicio.AddDate(0, 0, 1)
+
+	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && sucursal.RutaIP != "" {
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
+		} else if modo == "IP" {
+			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
+		}
+	}
+	if err != nil {
+		return 0, fmt.Errorf("FALLO ruta: %v", err)
+	}
+
+	totalInsert := 0
+	for _, dirName := range posDirs {
+		posNum, err := strconv.Atoi(dirName[3:])
+		if err != nil {
+			continue
+		}
+
+		var posPath string
+		if modo == "S" {
+			if sucursal.RutaDBF != "" {
+				posPath = strings.TrimRight(sucursal.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", sucursal.RutaIP, dirName)
+		}
+
+		dbfPath := filepath.Join(posPath, fmt.Sprintf("CA%02d%d.DBF", posNum, year))
+		if _, err := os.Stat(dbfPath); err != nil {
+			continue
+		}
+
+		regs, err := leerArchivoCARango(dbfPath, year, inicio, fin, codigo, posNum)
+		if err != nil || len(regs) == 0 {
+			continue
+		}
+
+		if err := InsertarVentasCA_Incremental(dbCA, regs, codigo, year, month, forceReload); err != nil {
+			continue
+		}
+		totalInsert += len(regs)
+	}
+
+	return totalInsert, nil
+}
+
+func ProcesarAutoCA(db *sql.DB, sucursales []Sucursal, year, month int, modo string) {
+	CrearTablaH_Tiendas(db)
+
+	hoy := time.Now()
+	dias := []int{hoy.Day() - 2, hoy.Day() - 1, hoy.Day()}
+
+	var diasValidos []int
+	for _, d := range dias {
+		if d >= 1 && d <= 31 {
+			fechaTest := time.Date(year, time.Month(month), d, 0, 0, 0, 0, time.UTC)
+			if fechaTest.Month() == time.Month(month) {
+				diasValidos = append(diasValidos, d)
+			}
+		}
+	}
+
+	fmt.Printf("CA_AUTO: %d tiendas, %d dias a procesar, modo=%s\n", len(sucursales), len(diasValidos), modo)
+	logInfo("CA_AUTO: Iniciando %d tiendas, dias %v, modo=%s", len(sucursales), diasValidos, modo)
+	tStart := time.Now()
+
+	var wg sync.WaitGroup
+	erroresGlobal := 0
+	var mu sync.Mutex
+	sem := make(chan struct{}, 5)
+
+	for _, s := range sucursales {
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(store Sucursal) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					logError("CA_AUTO: PANIC en %s: %v", store.Codigo, r)
+				}
+			}()
+
+			diasOK := 0
+			diasTotal := 0
+
+			for _, dia := range diasValidos {
+				diasTotal++
+				diaStart := time.Now()
+
+				diaInicio := time.Date(year, time.Month(month), dia, 0, 0, 0, 0, time.UTC)
+				diaFin := diaInicio.AddDate(0, 0, 1)
+
+				// PASO 1: Leer DBF del día en memoria
+				fmt.Printf("  %s  %02d/%02d Leyendo DBFs...\n", store.Codigo, dia, month)
+				todosRegs, errDBF := LeerDBFRangoCompleto(store, year, diaInicio, diaFin, modo)
+				if errDBF != nil {
+					mu.Lock()
+					logError("CA_AUTO: %s %02d/%02d error leyendo DBF: %v", store.Codigo, dia, month, errDBF)
+					InsertarH_Tiendas(db, store.Codigo, year, month, 0, 0, 0, "ERROR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				dbfCount := len(todosRegs)
+				if dbfCount == 0 {
+					mu.Lock()
+					logInfo("CA_AUTO: %s %02d/%02d SIN_DATOS", store.Codigo, dia, month)
+					InsertarH_Tiendas(db, store.Codigo, year, month, 0, 0, 0, "SIN_DATOS", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					mu.Unlock()
+					continue
+				}
+
+				fmt.Printf("  %s  %02d/%02d DBF: %d registros\n", store.Codigo, dia, month, dbfCount)
+
+				// PASO 2: Conectar, crear tabla y staging
+				dbCA, err := ConectarSQL_CA(store.Codigo)
+				if err != nil {
+					mu.Lock()
+					logError("CA_AUTO: %s %02d/%02d FALLO conexion: %v", store.Codigo, dia, month, err)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, 0, 0, "ERROR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+				CrearTablaPosVentasCA(dbCA, store.Codigo)
+				CrearTablaStagingCA(dbCA, store.Codigo)
+
+				// PASO 3: Cargar datos del DBF en staging
+				fmt.Printf("  %s  %02d/%02d Cargando %d registros en staging...\n", store.Codigo, dia, month, dbfCount)
+				if err := CargarDBFEnStaging(dbCA, todosRegs, store.Codigo); err != nil {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logError("CA_AUTO: %s %02d/%02d error staging: %v", store.Codigo, dia, month, err)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, 0, 0, "ERROR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				// PASO 4: Comparar staging vs SQL
+				iguales, countSQL, _, errComp := CompararStagingConSQL(dbCA, store.Codigo, diaInicio, diaFin)
+				if errComp != nil {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logError("CA_AUTO: %s %02d/%02d error comparando: %v", store.Codigo, dia, month, errComp)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, 0, 0, "ERROR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				if iguales {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logInfo("CA_AUTO: %s %02d/%02d SALTADO (%d regs)", store.Codigo, dia, month, countSQL)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, countSQL, 0, "SALTADO", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					diasOK++
+					mu.Unlock()
+					continue
+				}
+
+				// PASO 5: Borrar datos del día en batches de 1000
+				ctxDel, cancelDel := context.WithTimeout(context.Background(), 60*time.Minute)
+				borrados, delErr := BorrarRangoEnBatches(ctxDel, dbCA, store.Codigo, diaInicio, diaFin)
+				cancelDel()
+
+				if delErr != nil {
+					LimpiarStaging(dbCA, store.Codigo)
+					dbCA.Close()
+					mu.Lock()
+					logError("CA_AUTO: %s %02d/%02d DELETE fallo: %v", store.Codigo, dia, month, delErr)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, countSQL, 0, "ERROR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+				logInfo("CA_AUTO: %s %02d/%02d Borrado %d registros", store.Codigo, dia, month, borrados)
+
+				// PASO 6: Copiar staging a tabla principal
+				ctxCopy, cancelCopy := context.WithTimeout(context.Background(), 60*time.Minute)
+				copiados, errCopy := CopiarStagingATable(ctxCopy, dbCA, store.Codigo)
+				cancelCopy()
+				LimpiarStaging(dbCA, store.Codigo)
+
+				if errCopy != nil {
+					dbCA.Close()
+					mu.Lock()
+					logError("CA_AUTO: %s %02d/%02d COPY fallo: %v", store.Codigo, dia, month, errCopy)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, countSQL, 0, "ERROR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+					mu.Unlock()
+					continue
+				}
+
+				// PASO 7: Verificar resultado final
+				ctxVer, cancelVer := context.WithTimeout(context.Background(), 5*time.Minute)
+				finalCount, _ := ContarSQLPorDia(ctxVer, dbCA, store.Codigo, year, month, dia)
+				cancelVer()
+				dbCA.Close()
+
+				mu.Lock()
+				if finalCount == dbfCount {
+					logInfo("CA_AUTO: %s %02d/%02d OK (regs=%d, insertados=%d, %ds)", store.Codigo, dia, month, finalCount, int(copiados), int(time.Since(diaStart).Seconds()))
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, finalCount, int(copiados), "OK", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					diasOK++
+				} else {
+					logWarn("CA_AUTO: %s %02d/%02d REVISAR (DBF=%d SQL=%d dif=%d)", store.Codigo, dia, month, dbfCount, finalCount, dbfCount-finalCount)
+					InsertarH_Tiendas(db, store.Codigo, year, month, dbfCount, finalCount, int(copiados), "REVISAR", int(time.Since(diaStart).Seconds()), modo, "AUTOMATICO", "CA")
+					erroresGlobal++
+				}
+				mu.Unlock()
+			}
+
+			mu.Lock()
+			if diasOK == diasTotal {
+				fmt.Printf("  %s OK (%d/%d dias)\n", store.Codigo, diasOK, diasTotal)
+			} else {
+				fmt.Printf("  %s PARCIAL (%d/%d dias)\n", store.Codigo, diasOK, diasTotal)
+			}
+			mu.Unlock()
+		}(s)
+	}
+
+	wg.Wait()
+	fmt.Printf("\nCA_AUTO listo. Tiempo: %.1f min. (%d errores)\n", time.Since(tStart).Minutes(), erroresGlobal)
+	logInfo("CA_AUTO: Completado en %.1f min, %d errores", time.Since(tStart).Minutes(), erroresGlobal)
 }
 
 

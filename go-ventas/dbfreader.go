@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 type DBFField struct {
@@ -22,6 +24,7 @@ type DBFFile struct {
 	RecordSize int
 	Fields     []DBFField
 	DataOffset int64
+	CodePage   byte
 	file       *os.File
 }
 
@@ -40,10 +43,12 @@ func OpenDBF(path string) (*DBFFile, error) {
 	numRecords := int(binary.LittleEndian.Uint32(header[4:8]))
 	headerLen := int(binary.LittleEndian.Uint16(header[8:10]))
 	recordSize := int(binary.LittleEndian.Uint16(header[10:12]))
+	codePage := header[29]
 
 	dbf := &DBFFile{
 		NumRecords: numRecords,
 		RecordSize: recordSize,
+		CodePage:   codePage,
 		file:       f,
 	}
 
@@ -90,13 +95,54 @@ func (d *DBFFile) ReadRecord(idx int) ([]byte, error) {
 	return record, nil
 }
 
+func (d *DBFFile) decodeBytes(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	hasHigh := false
+	for _, c := range b {
+		if c >= 0x80 {
+			hasHigh = true
+			break
+		}
+	}
+	if !hasHigh {
+		return string(b)
+	}
+	var dec *charmap.Charmap
+	switch d.CodePage {
+	case 0x01:
+		dec = charmap.CodePage437
+	case 0x02:
+		dec = charmap.CodePage850
+	case 0x03:
+		dec = charmap.Windows1252
+	case 0x04:
+		dec = charmap.Windows1251
+	case 0x64:
+		dec = charmap.CodePage852
+	case 0x65:
+		dec = charmap.CodePage866
+	case 0x66:
+		dec = charmap.CodePage865
+	case 0x7E:
+		dec = charmap.Windows1250
+	case 0x7F:
+		dec = charmap.Windows1251
+	default:
+		dec = charmap.Windows1252
+	}
+	out, _ := dec.NewDecoder().Bytes(b)
+	return string(out)
+}
+
 func (d *DBFFile) GetString(record []byte, field DBFField) string {
 	start := field.Offset
 	end := start + field.Length
 	if end > len(record) {
 		end = len(record)
 	}
-	return strings.TrimSpace(string(record[start:end]))
+	return strings.TrimSpace(d.decodeBytes(record[start:end]))
 }
 
 func (d *DBFFile) GetFloat(record []byte, field DBFField) float64 {
@@ -156,5 +202,17 @@ func (d *DBFFile) GetVarChar(record []byte, field DBFField) string {
 	if end > len(record) {
 		end = len(record)
 	}
-	return strings.TrimRight(string(record[start:end]), "\x00 ")
+	return strings.TrimRight(d.decodeBytes(record[start:end]), "\x00 ")
+}
+
+func (d *DBFFile) GetRaw(record []byte, field DBFField) []byte {
+	start := field.Offset
+	if start < 0 || start > len(record) {
+		return nil
+	}
+	end := start + field.Length
+	if end > len(record) {
+		end = len(record)
+	}
+	return record[start:end]
 }

@@ -6,11 +6,12 @@ import (
 )
 
 type Config struct {
-	Modo             string `json:"modo"`
-	OutputDir        string `json:"output_dir"`
-	HoraInicio       int    `json:"hora_inicio"`
-	HoraFin          int    `json:"hora_fin"`
-	IntervaloMinutos int    `json:"intervalo_minutos"`
+	Modo             string   `json:"modo"`
+	OutputDir        string   `json:"output_dir"`
+	HoraInicio       int      `json:"hora_inicio"`
+	HoraFin          int      `json:"hora_fin"`
+	IntervaloMinutos int      `json:"intervalo_minutos"`
+	HorasFijas       []string `json:"horas_fijas,omitempty"`
 }
 
 func CargarConfig(path string) (Config, error) {

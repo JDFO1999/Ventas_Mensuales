@@ -1,0 +1,12 @@
+﻿# Backups
+go-ventas/backup_*/
+backup_*/
+
+# Temp / Cache
+__pycache__/
+*.pyc
+go-ventas/test_input.txt
+*.tmp
+
+# Carpetas ajenas al proyecto go-ventas
+Laravel-importaciones/

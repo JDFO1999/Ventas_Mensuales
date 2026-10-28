@@ -1,0 +1,10 @@
+{
+  "sucursal": "VC01",
+  "base": "\\\\10.15.1.81\\Sistema\\aBC-Soft\\Data",
+  "datos": "\\\\10.15.1.81\\Sistema\\aBC-Soft\\Datos",
+  "base_datos": "VC01",
+  "origenes": ["datos"],
+  "excluir_modulos": ["RESPALDO"],
+  "solo_anio": 2026,
+  "batch": 5000
+}

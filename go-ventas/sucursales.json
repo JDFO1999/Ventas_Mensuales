@@ -1,5 +1,5 @@
 {
-  "ultima_sincronizacion": "2026-08-03 14:52:17",
+  "ultima_sincronizacion": "2026-10-28 09:10:30",
   "tiendas": [
     {
       "Codigo": "AK01",
@@ -65,6 +65,13 @@
       "Cia": "001"
     },
     {
+      "Codigo": "AK10",
+      "Nombre": "Alkosto 10",
+      "RutaIP": "10.0.147.81",
+      "RutaDBF": "S:\\aBC-Soft\\Data\\Ak010\\",
+      "Cia": "001"
+    },
+    {
       "Codigo": "FC01",
       "Nombre": "Familia Center 01",
       "RutaIP": "10.12.1.81",
@@ -107,6 +114,13 @@
       "Cia": "002"
     },
     {
+      "Codigo": "FC07",
+      "Nombre": "Familia Cañada",
+      "RutaIP": "10.12.7.81",
+      "RutaDBF": "S:\\aBC-Soft\\Data\\FC07\\",
+      "Cia": "007"
+    },
+    {
       "Codigo": "HC01",
       "Nombre": "Hogar Center 01",
       "RutaIP": "10.13.1.81",
@@ -116,7 +130,7 @@
     {
       "Codigo": "HC02",
       "Nombre": "Hogar Center 02",
-      "RutaIP": "10.13.2.81",
+      "RutaIP": "10.96.19.81",
       "RutaDBF": "S:\\aBC-Soft\\Data\\HC02\\",
       "Cia": "004"
     },

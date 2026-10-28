@@ -1,6 +1,6 @@
 module ventas-mensuales
 
-go 1.21
+go 1.26.0
 
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
@@ -17,5 +17,5 @@ require (
 	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 )

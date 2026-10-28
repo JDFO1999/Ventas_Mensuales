@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/denisenkom/go-mssqldb"
+	mssql "github.com/denisenkom/go-mssqldb"
 )
 
 const (
@@ -32,13 +32,15 @@ func ConectarSQL() (*sql.DB, error) {
 }
 
 func ConectarSQL_CA(_ string) (*sql.DB, error) {
-	connStr := fmt.Sprintf("server=%s;database=BD_Tiendas;user id=%s;password=%s;encrypt=disable;connection timeout=30;timeout=180",
+	connStr := fmt.Sprintf("server=%s;database=BD_Tiendas;user id=%s;password=%s;encrypt=disable;connection timeout=30;timeout=600",
 		SQLServer, SQLUser, SQLPassword)
 	db, err := sql.Open("mssql", connStr)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(2)
+	db.SetMaxOpenConns(5)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxLifetime(0)
 	return db, nil
 }
 
@@ -214,6 +216,51 @@ func BorrarDatosTienda(ctx context.Context, db *sql.DB, codigo string, year, mon
 	return nil
 }
 
+func ReconciliarPosVentas(db *sql.DB, codigo string, year, month int, dbfKeys map[string]bool) (int, error) {
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
+
+	rows, err := db.Query(
+		`SELECT Caja, Numero, Tipo FROM PosVentas
+		 WHERE Tienda=? AND Fecha >= ? AND Fecha < ?`,
+		codigo, startDate, endDate)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	type key struct {
+		caja   int
+		numero string
+		tipo   string
+	}
+	var huerfanos []key
+
+	for rows.Next() {
+		var caja int
+		var numero, tipo string
+		if err := rows.Scan(&caja, &numero, &tipo); err != nil {
+			return 0, err
+		}
+		k := fmt.Sprintf("%d|%s|%s", caja, numero, tipo)
+		if !dbfKeys[k] {
+			huerfanos = append(huerfanos, key{caja, numero, tipo})
+		}
+	}
+
+	eliminados := 0
+	for _, h := range huerfanos {
+		_, err := db.Exec(
+			`DELETE FROM PosVentas WHERE Tienda=? AND Caja=? AND Numero=? AND Tipo=?`,
+			codigo, h.caja, h.numero, h.tipo)
+		if err != nil {
+			return eliminados, err
+		}
+		eliminados++
+	}
+	return eliminados, nil
+}
+
 func InsertarVentas(db *sql.DB, registros []VentaRegistro) error {
 	const chunkSize = 5000
 	query := `INSERT INTO PosVentas (Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Anulada, Operador,
@@ -358,7 +405,7 @@ func CrearTablaPosVentasCA(db *sql.DB, codigo string) error {
 }
 
 func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) error {
-	const chunkSize = 5000
+	const maxChunkSize = 5000
 	tableName := "POS_CA_" + codigo
 	query := fmt.Sprintf(`INSERT INTO %s (Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip,
 		CodVen, Modelo, Serial, Cantidad, NCntd, NPvpDol, NPvp2Dol, NPvp3Dol, NPvpCop,
@@ -369,6 +416,7 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) er
 			?,?,?,?,?,?,?,?,
 			?,?,?,?,?,?,?,?,?,?)`, tableName)
 
+	chunkSize := maxChunkSize
 	for i := 0; i < len(registros); i += chunkSize {
 		end := i + chunkSize
 		if end > len(registros) {
@@ -376,63 +424,116 @@ func InsertarVentasCA(db *sql.DB, registros []VentaCARegistro, codigo string) er
 		}
 		chunk := registros[i:end]
 
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-
-		for _, r := range chunk {
-			var fechaCie interface{}
-			if r.FechaCie != nil {
-				fechaCie = *r.FechaCie
+		var lastErr error
+		for retry := 0; retry < 3; retry++ {
+			if retry > 0 {
+				time.Sleep(time.Duration(retry) * 2 * time.Second)
+				if retry == 2 {
+					chunkSize = maxChunkSize / 2
+				}
+				if retry == 1 {
+					chunkSize = maxChunkSize
+				}
+				end = i + chunkSize
+				if end > len(registros) {
+					end = len(registros)
+				}
+				chunk = registros[i:end]
 			}
-			_, err = tx.Exec(query,
-				r.Fecha, r.Hora, r.Tienda, r.Caja, r.Tipo, r.STipo, r.Numero, r.Codigo, r.CodBar, r.Descrip,
-				r.CodVen, r.Modelo, r.Serial, r.Cantidad, r.NCntd, r.NPvpDol, r.NPvp2Dol, r.NPvp3Dol, r.NPvpCop,
-				r.Precio, r.NPrecio, r.IGV, r.NoDscto, r.CodCli, r.Anulada, r.Depto, r.Familia,
-				r.Costo, r.NCosDol, r.Pvpt, r.Oferta, r.Devlto, r.Margen, r.PvpVen, r.LPesado, r.NroCie, fechaCie,
-			)
+
+			tx, err := db.Begin()
+			if err != nil {
+				lastErr = err
+				continue
+			}
+
+			err = nil
+			for _, r := range chunk {
+				var fechaCie interface{}
+				if r.FechaCie != nil {
+					fechaCie = *r.FechaCie
+				}
+				_, err = tx.Exec(query,
+					r.Fecha, r.Hora, r.Tienda, r.Caja, r.Tipo, r.STipo, r.Numero, r.Codigo, r.CodBar, r.Descrip,
+					r.CodVen, r.Modelo, r.Serial, r.Cantidad, r.NCntd, r.NPvpDol, r.NPvp2Dol, r.NPvp3Dol, r.NPvpCop,
+					r.Precio, r.NPrecio, r.IGV, r.NoDscto, r.CodCli, r.Anulada, r.Depto, r.Familia,
+					r.Costo, r.NCosDol, r.Pvpt, r.Oferta, r.Devlto, r.Margen, r.PvpVen, r.LPesado, r.NroCie, fechaCie,
+				)
+				if err != nil {
+					break
+				}
+			}
+
 			if err != nil {
 				tx.Rollback()
-				return err
+				lastErr = err
+				continue
 			}
+
+			if err := tx.Commit(); err != nil {
+				lastErr = err
+				continue
+			}
+
+			lastErr = nil
+			break
 		}
 
-		if err := tx.Commit(); err != nil {
-			return err
+		if lastErr != nil {
+			return fmt.Errorf("chunk %d-%d fallo tras 3 intentos: %v", i, end, lastErr)
 		}
 	}
 	return nil
 }
 
-func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codigo string, year, month int) error {
+func InsertarVentasCA_Incremental(db *sql.DB, registros []VentaCARegistro, codigo string, year, month int, forceReload ...bool) error {
 	tableName := "POS_CA_" + codigo
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0)
 
-	existing := make(map[string]bool)
-	rows, err := db.Query(
-		fmt.Sprintf("SELECT Caja, Numero, Tipo, Codigo FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
-		codigo, startDate, endDate,
-	)
-	if err == nil {
-		for rows.Next() {
-			var caja int
-			var numero, tipo, cod string
-			if err := rows.Scan(&caja, &numero, &tipo, &cod); err == nil {
-				key := fmt.Sprintf("%d|%s|%s|%s", caja, numero, tipo, cod)
-				existing[key] = true
-			}
-		}
-		rows.Close()
-	}
+	force := len(forceReload) > 0 && forceReload[0]
 
 	var nuevos []VentaCARegistro
-	for _, r := range registros {
-		key := fmt.Sprintf("%d|%s|%s|%s", r.Caja, r.Numero, r.Tipo, r.Codigo)
-		if !existing[key] {
-			nuevos = append(nuevos, r)
+	if !force {
+		existing := make(map[string]bool)
+		var loadErr error
+		for retry := 0; retry < 3; retry++ {
+			if retry > 0 {
+				time.Sleep(time.Duration(retry) * time.Second)
+			}
+			existing = make(map[string]bool)
+			rows, err := db.Query(
+				fmt.Sprintf("SELECT Caja, Numero, Tipo, Codigo FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+				codigo, startDate, endDate,
+			)
+			if err != nil {
+				loadErr = err
+				continue
+			}
+			for rows.Next() {
+				var caja int
+				var numero, tipo, cod string
+				if err := rows.Scan(&caja, &numero, &tipo, &cod); err == nil {
+					key := fmt.Sprintf("%d|%s|%s|%s", caja, numero, tipo, cod)
+					existing[key] = true
+				}
+			}
+			rows.Close()
+			loadErr = nil
+			break
 		}
+		if loadErr != nil {
+			return fmt.Errorf("fallo leyendo claves existentes tras 3 intentos: %v", loadErr)
+		}
+
+		for _, r := range registros {
+			key := fmt.Sprintf("%d|%s|%s|%s", r.Caja, r.Numero, r.Tipo, r.Codigo)
+			if !existing[key] {
+				nuevos = append(nuevos, r)
+			}
+		}
+	} else {
+		nuevos = registros
 	}
 
 	if len(nuevos) == 0 {
@@ -468,17 +569,44 @@ func BorrarDatosTiendaCA(ctx context.Context, db *sql.DB, codigo string, year, m
 	tableName := "POS_CA_" + codigo
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0)
-	for {
+
+	diasMes := endDate.Sub(startDate).Hours() / 24
+	for d := 0; d < int(diasMes); d++ {
+		dia := startDate.AddDate(0, 0, d)
+		diaFin := dia.AddDate(0, 0, 1)
+		if diaFin.After(endDate) {
+			diaFin = endDate
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("DELETE timeout: %v", ctx.Err())
+		default:
+		}
+
 		result, err := db.ExecContext(ctx,
-			fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
-			codigo, startDate, endDate,
+			fmt.Sprintf("DELETE FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+			codigo, dia, diaFin,
 		)
 		if err != nil {
-			return err
+			for retry := 0; retry < 2; retry++ {
+				time.Sleep(time.Duration(retry+1) * time.Second)
+				result, err = db.ExecContext(ctx,
+					fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+					codigo, dia, diaFin,
+				)
+				if err == nil {
+					break
+				}
+			}
+			if err != nil {
+				fmt.Printf("\n    WARNING: No se pudo borrar %s dia %s: %v", codigo, dia.Format("02/01"), err)
+				continue
+			}
 		}
 		rows, _ := result.RowsAffected()
-		if rows == 0 {
-			break
+		if rows > 0 {
+			fmt.Printf("\n    %s borrado %s: %d registros", codigo, dia.Format("02/01"), rows)
 		}
 	}
 	return nil
@@ -486,17 +614,44 @@ func BorrarDatosTiendaCA(ctx context.Context, db *sql.DB, codigo string, year, m
 
 func BorrarRangoTiendaCA(ctx context.Context, db *sql.DB, codigo string, inicio, fin time.Time) error {
 	tableName := "POS_CA_" + codigo
-	for {
+
+	dias := int(fin.Sub(inicio).Hours() / 24)
+	for d := 0; d < dias; d++ {
+		dia := inicio.AddDate(0, 0, d)
+		diaFin := dia.AddDate(0, 0, 1)
+		if diaFin.After(fin) {
+			diaFin = fin
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("DELETE timeout: %v", ctx.Err())
+		default:
+		}
+
 		result, err := db.ExecContext(ctx,
-			fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
-			codigo, inicio, fin,
+			fmt.Sprintf("DELETE FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+			codigo, dia, diaFin,
 		)
 		if err != nil {
-			return err
+			for retry := 0; retry < 2; retry++ {
+				time.Sleep(time.Duration(retry+1) * time.Second)
+				result, err = db.ExecContext(ctx,
+					fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+					codigo, dia, diaFin,
+				)
+				if err == nil {
+					break
+				}
+			}
+			if err != nil {
+				fmt.Printf("\n    WARNING: No se pudo borrar %s dia %s: %v", codigo, dia.Format("02/01"), err)
+				continue
+			}
 		}
 		rows, _ := result.RowsAffected()
-		if rows == 0 {
-			break
+		if rows > 0 {
+			fmt.Printf("\n    %s borrado %s: %d registros", codigo, dia.Format("02/01"), rows)
 		}
 	}
 	return nil
@@ -580,6 +735,280 @@ func InsertarH_Tiendas(db *sql.DB, tienda string, anio, mes int, registrosDBF, r
 		logError("H_Tiendas insert fallo (%s %s %d): %v", sistema, tienda, anio, err)
 	}
 	return err
+}
+
+func BorrarDiaCA(ctx context.Context, db *sql.DB, codigo string, year, month, day int) (int, error) {
+	tableName := "POS_CA_" + codigo
+	dia := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	diaFin := dia.AddDate(0, 0, 1)
+
+	totalBorrado := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return totalBorrado, fmt.Errorf("DELETE timeout: %v", ctx.Err())
+		default:
+		}
+
+		result, err := db.ExecContext(ctx,
+			fmt.Sprintf("DELETE TOP(50000) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+			codigo, dia, diaFin,
+		)
+		if err != nil {
+			return totalBorrado, err
+		}
+
+		rows, _ := result.RowsAffected()
+		totalBorrado += int(rows)
+
+		if rows == 0 {
+			break
+		}
+	}
+
+	return totalBorrado, nil
+}
+
+func ContarSQLPorDia(ctx context.Context, db *sql.DB, codigo string, year, month, day int) (int, error) {
+	tableName := "POS_CA_" + codigo
+	dia := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	diaFin := dia.AddDate(0, 0, 1)
+
+	var count int
+	err := db.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", tableName),
+		codigo, dia, diaFin,
+	).Scan(&count)
+	return count, err
+}
+
+// ==================== STAGING TABLE FUNCTIONS ====================
+
+func CrearTablaStagingCA(db *sql.DB, codigo string) error {
+	stgTable := "POS_CA_" + codigo + "_STG"
+	mainTable := "POS_CA_" + codigo
+	db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", stgTable))
+	_, err := db.Exec(fmt.Sprintf(`SELECT * INTO %s FROM %s WHERE 1=0`, stgTable, mainTable))
+	if err != nil {
+		return fmt.Errorf("error creando staging: %v", err)
+	}
+	db.Exec(fmt.Sprintf("ALTER TABLE %s ADD _RowID INT IDENTITY(1,1)", stgTable))
+	db.Exec(fmt.Sprintf("CREATE CLUSTERED INDEX IX_STG_RowID ON %s(_RowID)", stgTable))
+	return nil
+}
+
+func LimpiarStaging(db *sql.DB, codigo string) {
+	stgTable := "POS_CA_" + codigo + "_STG"
+	db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", stgTable))
+}
+
+func CargarDBFEnStaging(db *sql.DB, registros []VentaCARegistro, codigo string) error {
+	if len(registros) == 0 {
+		return nil
+	}
+	stgTable := "POS_CA_" + codigo + "_STG"
+
+	cols := []string{
+		"Fecha", "Hora", "Tienda", "Caja", "Tipo", "STipo", "Numero", "Codigo", "CodBar", "Descrip",
+		"CodVen", "Modelo", "Serial", "Cantidad", "NCntd", "NPvpDol", "NPvp2Dol", "NPvp3Dol", "NPvpCop",
+		"Precio", "NPrecio", "IGV", "NoDscto", "CodCli", "Anulada", "Depto", "Familia",
+		"Costo", "NCosDol", "Pvpt", "Oferta", "Devlto", "Margen", "PvpVen", "LPesado", "NroCie", "FechaCie",
+	}
+
+	copyStmt := mssql.CopyIn(stgTable, mssql.BulkOptions{}, cols...)
+	bulkStmt, err := db.Prepare(copyStmt)
+	if err != nil {
+		return fmt.Errorf("preparando bulk copy staging: %v", err)
+	}
+
+	for i, r := range registros {
+		var fechaCie interface{}
+		if r.FechaCie != nil {
+			fechaCie = *r.FechaCie
+		}
+		_, err := bulkStmt.Exec(
+			r.Fecha, r.Hora, r.Tienda, r.Caja, r.Tipo, r.STipo, r.Numero, r.Codigo, r.CodBar, r.Descrip,
+			r.CodVen, r.Modelo, r.Serial, r.Cantidad, r.NCntd, r.NPvpDol, r.NPvp2Dol, r.NPvp3Dol, r.NPvpCop,
+			r.Precio, r.NPrecio, r.IGV, r.NoDscto, r.CodCli, r.Anulada, r.Depto, r.Familia,
+			r.Costo, r.NCosDol, r.Pvpt, r.Oferta, r.Devlto, r.Margen, r.PvpVen, r.LPesado, r.NroCie, fechaCie,
+		)
+		if err != nil {
+			bulkStmt.Close()
+			return fmt.Errorf("bulk copy row %d: %v", i, err)
+		}
+		if (i+1)%5000 == 0 || i+1 == len(registros) {
+			fmt.Printf("\r  STG: %d/%d registros cargados...    ", i+1, len(registros))
+		}
+	}
+
+	_, err = bulkStmt.Exec()
+	bulkStmt.Close()
+	if err != nil {
+		return fmt.Errorf("finalizando bulk copy staging: %v", err)
+	}
+	fmt.Printf("\n")
+	return nil
+}
+
+func CompararStagingConSQL(db *sql.DB, codigo string, inicio, fin time.Time) (iguales bool, countSQL int, countSTG int, err error) {
+	stgTable := "POS_CA_" + codigo + "_STG"
+	mainTable := "POS_CA_" + codigo
+
+	err = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", stgTable)).Scan(&countSTG)
+	if err != nil {
+		return false, 0, 0, err
+	}
+
+	err = db.QueryRow(fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", mainTable),
+		codigo, inicio, fin,
+	).Scan(&countSQL)
+	if err != nil {
+		return false, 0, 0, err
+	}
+
+	return countSTG == countSQL && countSTG > 0, countSQL, countSTG, nil
+}
+
+func BorrarRangoEnBatches(ctx context.Context, db *sql.DB, codigo string, inicio, fin time.Time) (int, error) {
+	tableName := "POS_CA_" + codigo
+	totalBorrado := 0
+	batchSize := 10000
+	maxReintentos := 3
+
+	// Desactivar indice no agrupado temporalmente para acelerar el borrado masivo y evitar timeouts
+	db.Exec(fmt.Sprintf("DROP INDEX IF EXISTS IX_POS_CA_Fecha ON %s", tableName))
+
+	for {
+		select {
+		case <-ctx.Done():
+			return totalBorrado, fmt.Errorf("DELETE timeout: %v", ctx.Err())
+		default:
+		}
+
+		result, err := db.ExecContext(ctx,
+			fmt.Sprintf("DELETE TOP(%d) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", batchSize, tableName),
+			codigo, inicio, fin,
+		)
+		if err != nil {
+			reintentos := 0
+			for reintentos < maxReintentos {
+				select {
+				case <-ctx.Done():
+					return totalBorrado, fmt.Errorf("DELETE timeout: %v", ctx.Err())
+				default:
+				}
+				// Reduccion dinamica del lote si hay saturacion de I/O o timeout
+				if batchSize > 1000 {
+					batchSize = batchSize / 2
+				}
+				logWarn("DELETE: batch fallo (%v), reduciendo lote a %d, reintento %d", err, batchSize, reintentos+1)
+				time.Sleep(3 * time.Second)
+				result, err = db.ExecContext(ctx,
+					fmt.Sprintf("DELETE TOP(%d) FROM %s WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", batchSize, tableName),
+					codigo, inicio, fin,
+				)
+				if err == nil {
+					break
+				}
+				reintentos++
+			}
+			if err != nil {
+				return totalBorrado, err
+			}
+		}
+
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			break
+		}
+		totalBorrado += int(rows)
+		// Breve descanso para permitir que SQL Server vacie el log de transacciones
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	return totalBorrado, nil
+}
+
+func CopiarStagingATable(ctx context.Context, db *sql.DB, codigo string) (int64, error) {
+	stgTable := "POS_CA_" + codigo + "_STG"
+	mainTable := "POS_CA_" + codigo
+	cols := "Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Codigo, CodBar, Descrip, CodVen, Modelo, Serial, Cantidad, NCntd, NPvpDol, NPvp2Dol, NPvp3Dol, NPvpCop, Precio, NPrecio, IGV, NoDscto, CodCli, Anulada, Depto, Familia, Costo, NCosDol, Pvpt, Oferta, Devlto, Margen, PvpVen, LPesado, NroCie, FechaCie"
+
+	var countSTG int
+	db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", stgTable)).Scan(&countSTG)
+	logInfo("COPY: staging=%s tiene %d registros", stgTable, countSTG)
+	if countSTG == 0 {
+		return 0, fmt.Errorf("staging vacio")
+	}
+
+	var maxRowID int
+	err := db.QueryRow(fmt.Sprintf("SELECT ISNULL(MAX(_RowID), 0) FROM %s", stgTable)).Scan(&maxRowID)
+	if err != nil {
+		return 0, fmt.Errorf("error obteniendo max rowid de staging: %v", err)
+	}
+
+	db.Exec(fmt.Sprintf("DROP INDEX IF EXISTS IX_POS_CA_Fecha ON %s", mainTable))
+
+	batchSize := 10000
+	maxReintentos := 3
+	var totalCopied int64
+	offset := 0
+
+	for offset < maxRowID {
+		select {
+		case <-ctx.Done():
+			return totalCopied, fmt.Errorf("COPY timeout: %v", ctx.Err())
+		default:
+		}
+
+		limit := offset + batchSize
+		result, err := db.ExecContext(ctx, fmt.Sprintf(
+			"INSERT INTO %s (%s) SELECT %s FROM %s WHERE _RowID > %d AND _RowID <= %d",
+			mainTable, cols, cols, stgTable, offset, limit))
+		if err != nil {
+			reintentos := 0
+			for reintentos < maxReintentos {
+				select {
+				case <-ctx.Done():
+					return totalCopied, fmt.Errorf("COPY timeout: %v", ctx.Err())
+				default:
+				}
+				logWarn("COPY: batch %d-%d fallo (%v), reintento %d", offset, limit, err, reintentos+1)
+				time.Sleep(3 * time.Second)
+				result, err = db.ExecContext(ctx, fmt.Sprintf(
+					"INSERT INTO %s (%s) SELECT %s FROM %s WHERE _RowID > %d AND _RowID <= %d",
+					mainTable, cols, cols, stgTable, offset, limit))
+				if err == nil {
+					break
+				}
+				reintentos++
+			}
+			if err != nil {
+				return totalCopied, fmt.Errorf("batch %d-%d error: %v", offset, limit, err)
+			}
+		}
+
+		rows, _ := result.RowsAffected()
+		totalCopied += rows
+		if rows > 0 {
+			logInfo("COPY: batch %d-%d copiados %d (progreso: %d/%d)", offset, limit, rows, totalCopied, countSTG)
+		}
+		offset += batchSize
+		time.Sleep(30 * time.Millisecond)
+	}
+
+	if totalCopied != int64(countSTG) {
+		logWarn("COPY: registros copiados (%d) difiere del total en staging (%d)", totalCopied, countSTG)
+	}
+
+	logInfo("COPY: %d registros copiados a %s", totalCopied, mainTable)
+
+	db.Exec(fmt.Sprintf(`
+		IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('%s') AND name = 'IX_POS_CA_Fecha')
+		CREATE NONCLUSTERED INDEX IX_POS_CA_Fecha ON %s(Tienda, Fecha)`, mainTable, mainTable))
+
+	return totalCopied, nil
 }
 
 

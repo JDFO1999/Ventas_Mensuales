@@ -98,14 +98,55 @@ func main() {
 
 	autoPtr := flag.Bool("auto", false, "Modo automatico sin menu")
 	autoCaPtr := flag.Bool("auto-ca", false, "Modo automatico CA")
+	caFechaPtr := flag.Bool("ca-fecha", false, "CA por fecha rango (borra y recarga)")
 	configPtr := flag.Bool("config", false, "Abrir menu de configuracion")
+	autoEstadPtr := flag.Bool("auto-estad", false, "Modo automatico ESTAD")
+	autoEstapagoPtr := flag.Bool("auto-estapago", false, "Modo automatico ESTA_PAGO")
+	autoIGTFPtr := flag.Bool("auto-igtf", false, "Modo automatico IGTF")
+	autoRcpPtr := flag.Bool("auto-rcp", false, "Modo automatico RCP")
+	autoSubFamPtr := flag.Bool("auto-subfam", false, "Modo automatico SUBFAM")
+	autoCxPPtr := flag.Bool("auto-cxp", false, "Modo automatico CxP")
+	autoOfertasPtr := flag.Bool("auto-ofertas", false, "Modo automatico OFERTAS")
+	setupOfertasPtr := flag.Bool("setup-ofertas", false, "Configura y registra automaticamente la tarea de ofertas en Windows")
+	espejoPtr := flag.Bool("espejo", false, "Cargar espejo DBF a SQL Server")
+	espejoSucPtr := flag.String("espejo-sucursal", "", "Sucursal a espejar (ej: VC01)")
+	espejoOrigenPtr := flag.String("espejo-origen", "", "Origenes separados por coma: data,datos")
+	espejoAnioPtr := flag.Int("espejo-solo-anio", 0, "Solo tablas anuales de ese anio en Datos (0=todos)")
 	modePtr := flag.String("mode", "", "Modo: S o IP")
 	monthPtr := flag.Int("month", 0, "Mes (1-12)")
+	monthFinPtr := flag.Int("month-fin", 0, "Mes fin (1-12), opcional")
 	yearPtr := flag.Int("year", 0, "Año")
+	fechaInicioPtr := flag.String("fecha-inicio", "", "Fecha inicio DD/MM/YYYY (para --ca-fecha)")
+	fechaFinPtr := flag.String("fecha-fin", "", "Fecha fin DD/MM/YYYY (para --ca-fecha)")
+	storesPtr := flag.String("stores", "", "Tiendas separadas por coma (ej: AK04,AK05,AK07)")
 	flag.Parse()
 
 	if *configPtr {
 		MenuConfig()
+		return
+	}
+
+	if *espejoPtr {
+		cfg := cargarConfigEspejo("espejo_config.json")
+		if strings.TrimSpace(*espejoSucPtr) != "" {
+			cfg.Sucursal = strings.TrimSpace(*espejoSucPtr)
+			cfg.BaseDatos = cfg.Sucursal
+			cfg.Base = ""
+			cfg.Datos = ""
+		}
+		if strings.TrimSpace(*espejoOrigenPtr) != "" {
+			partes := strings.Split(*espejoOrigenPtr, ",")
+			cfg.Origenes = cfg.Origenes[:0]
+			for _, p := range partes {
+				if p = strings.TrimSpace(p); p != "" {
+					cfg.Origenes = append(cfg.Origenes, p)
+				}
+			}
+		}
+		if *espejoAnioPtr > 0 {
+			cfg.SoloAnio = *espejoAnioPtr
+		}
+		CargarEspejo(cfg)
 		return
 	}
 
@@ -155,6 +196,216 @@ func main() {
 		return
 	}
 
+	if *caFechaPtr {
+		mode := *modePtr
+		if mode == "" {
+			cfg, err := CargarConfig("config.json")
+			if err != nil {
+				fmt.Println("ERROR: Sin config. Ejecute --config primero.")
+				return
+			}
+			mode = cfg.Modo
+		}
+
+		fechaInicioStr := *fechaInicioPtr
+		fechaFinStr := *fechaFinPtr
+		if fechaInicioStr == "" || fechaFinStr == "" {
+			fmt.Println("ERROR: --ca-fecha requiere --fecha-inicio y --fecha-fin (DD/MM/YYYY)")
+			return
+		}
+		fechaInicio, err := time.Parse("02/01/2006", fechaInicioStr)
+		if err != nil {
+			fmt.Printf("ERROR formato fecha inicio: %v\n", err)
+			return
+		}
+		fechaFin, err := time.Parse("02/01/2006", fechaFinStr)
+		if err != nil {
+			fmt.Printf("ERROR formato fecha fin: %v\n", err)
+			return
+		}
+		fechaFin = fechaFin.AddDate(0, 0, 1)
+
+		fmt.Printf("CA FECHA: %s al %s, modo=%s\n", fechaInicio.Format("02/01/2006"), fechaFin.AddDate(0, 0, -1).Format("02/01/2006"), mode)
+
+		db, err := ConectarSQL()
+		if err != nil {
+			fmt.Printf("ERROR conexion: %v\n", err)
+			return
+		}
+		defer db.Close()
+
+		allStores, err := ObtenerSucursales(db)
+		if err != nil {
+			fmt.Printf("ERROR obtener tiendas: %v\n", err)
+			return
+		}
+
+		storesFilter := *storesPtr
+		var sucursales []Sucursal
+		if storesFilter != "" {
+			selected := strings.Split(storesFilter, ",")
+			for _, s := range selected {
+				s = strings.TrimSpace(s)
+				for _, store := range allStores {
+					if strings.EqualFold(store.Codigo, s) {
+						sucursales = append(sucursales, store)
+						break
+					}
+				}
+			}
+			fmt.Printf("Tiendas seleccionadas: %d\n", len(sucursales))
+		} else {
+			sucursales = allStores
+			fmt.Printf("Todas las tiendas: %d\n", len(sucursales))
+		}
+
+		ProcesarCAFecha(db, sucursales, fechaInicio.Year(), fechaInicio, fechaFin, mode)
+		return
+	}
+
+	if *autoEstadPtr {
+		year := *yearPtr
+		month := *monthPtr
+		mode := *modePtr
+		if year == 0 {
+			year = time.Now().Year()
+		}
+		if month == 0 {
+			month = int(time.Now().Month())
+		}
+		if mode == "" {
+			if cfg, err := CargarConfig("config_estad.json"); err == nil {
+				mode = cfg.Modo
+			} else {
+				mode = "IP"
+			}
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoEstad(year, month, cfg, true)
+		return
+	}
+
+	if *autoEstapagoPtr {
+		year := *yearPtr
+		mode := *modePtr
+		if year == 0 {
+			year = time.Now().Year()
+		}
+		if mode == "" {
+			if cfg, err := CargarConfig("config_estapago.json"); err == nil {
+				mode = cfg.Modo
+			} else {
+				mode = "IP"
+			}
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoEstapago(year, cfg, true)
+		return
+	}
+
+	if *autoIGTFPtr {
+		year := *yearPtr
+		month := *monthPtr
+		monthFin := *monthFinPtr
+		if year == 0 {
+			year = time.Now().Year()
+		}
+		if month == 0 {
+			month = 1
+		}
+		if monthFin == 0 {
+			monthFin = month
+		}
+		cfg := Config{Modo: "IP", OutputDir: outputDir}
+		for m := month; m <= monthFin; m++ {
+			fmt.Printf("\n=== IGTF mes %d de %d ===\n", m, year)
+			procesarAutomaticoIGTF(year, m, cfg)
+		}
+		return
+	}
+
+	if *autoRcpPtr {
+		year := *yearPtr
+		mode := *modePtr
+		if year == 0 {
+			year = time.Now().Year()
+		}
+		if mode == "" {
+			if cfg, err := CargarConfig("config_rcp.json"); err == nil {
+				mode = cfg.Modo
+			} else {
+				mode = "IP"
+			}
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoRCP(year, cfg, true)
+		return
+	}
+
+	if *autoSubFamPtr {
+		mode := *modePtr
+		if mode == "" {
+			if cfg, err := CargarConfig("config_subfam.json"); err == nil {
+				mode = cfg.Modo
+			} else {
+				mode = "IP"
+			}
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoSubFam(cfg, true)
+		return
+	}
+
+	if *autoCxPPtr {
+		year := *yearPtr
+		if year == 0 {
+			year = time.Now().Year()
+		}
+		mode := *modePtr
+		if mode == "" {
+			if cfg, err := CargarConfig("config_cxp.json"); err == nil {
+				mode = cfg.Modo
+			} else {
+				mode = "IP"
+			}
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoCxP(year, cfg, true)
+		return
+	}
+
+	if *autoOfertasPtr {
+		mode := *modePtr
+		if mode == "" {
+			if cfg, err := CargarConfig("config_ofertas.json"); err == nil {
+				mode = cfg.Modo
+			} else {
+				mode = "IP"
+			}
+		}
+		cfg := Config{Modo: mode, OutputDir: outputDir}
+		procesarAutomaticoOfertas(cfg, true)
+		return
+	}
+
+	if *setupOfertasPtr {
+		cfg, err := CargarConfig("config_ofertas.json")
+		if err != nil {
+			cfg = Config{
+				Modo:             "IP",
+				OutputDir:        outputDir,
+				HoraInicio:       0,
+				HoraFin:          23,
+				IntervaloMinutos: 5,
+			}
+		}
+		if *modePtr != "" {
+			cfg.Modo = *modePtr
+		}
+		crearTareaProgramadaOfertas(cfg)
+		return
+	}
+
 	menuPrincipal()
 }
 
@@ -182,21 +433,70 @@ func menuPrincipal() {
 
 		fmt.Printf("  TAREA PROGRAMADA FA: %s\n", estadoTarea())
 		fmt.Printf("  TAREA PROGRAMADA CA: %s\n", estadoTareaCA())
+		fmt.Printf("  TAREA PROGRAMADA ESTAD: %s\n", estadoTareaEstad())
+		fmt.Printf("  TAREA PROGRAMADA ESTA_PAGO: %s\n", estadoTareaEstapago())
+		fmt.Printf("  TAREA PROGRAMADA RCP: %s\n", estadoTareaRCP())
+		fmt.Printf("  TAREA PROGRAMADA SUBFAM: %s\n", estadoTareaSubFam())
+		fmt.Printf("  TAREA PROGRAMADA CxP: %s\n", estadoTareaCxP())
+		fmt.Printf("  TAREA PROGRAMADA OFERTAS: %s\n", estadoTareaOfertas())
 		fmt.Println()
 		fmt.Println("  ┌──── FACTURAS (FA) ──────────────────────┐")
 		fmt.Println("  │  [1] Reporte manual FA                   │")
 		fmt.Println("  │  [2] Configurar automatizacion FA        │")
 		fmt.Println("  │  [3] Ejecutar FA modo automatico         │")
+		fmt.Println("  │  [14] Insertar IGTF (Formas de pago)     │")
 		fmt.Println("  └──────────────────────────────────────────┘")
 		fmt.Println()
 		fmt.Println("  ┌──── DETALLE PRODUCTOS (CA) ──────────────┐")
 		fmt.Println("  │  [4] Reporte manual CA                   │")
 		fmt.Println("  │  [5] Ejecutar CA modo automatico         │")
 		fmt.Println("  │  [6] Configurar automatizacion CA        │")
+		fmt.Println("  │  [21] Corregir CA por fecha              │")
+		fmt.Println("  │  [22] Corregir Depto/Familia             │")
 		fmt.Println("  └──────────────────────────────────────────┘")
 		fmt.Println()
-	fmt.Println("  [7] Ver historial de ejecuciones")
-	fmt.Println("  [0] Salir")
+		fmt.Println("  ┌──── ESTADISTICAS VENTAS (ESTAD) ─────────┐")
+		fmt.Println("  │  [8] Cargar ESTAD a SQL                  │")
+		fmt.Println("  │  [9] Ejecutar ESTAD modo automatico      │")
+		fmt.Println("  │  [10] Configurar automatizacion ESTAD   │")
+		fmt.Println("  └──────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── FORMAS DE PAGO (ESTA_PAGO) ──────────┐")
+		fmt.Println("  │  [11] Cargar ESTA_PAGO a SQL             │")
+		fmt.Println("  │  [12] Ejecutar ESTA_PAGO automatico      │")
+		fmt.Println("  │  [13] Configurar automatizacion ESTA_PAGO│")
+		fmt.Println("  └──────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── RECEPCION DE COMPRA (RCP) ───────────┐")
+		fmt.Println("  │  [15] Cargar RCP a SQL                   │")
+		fmt.Println("  │  [16] Ejecutar RCP modo automatico       │")
+		fmt.Println("  │  [17] Configurar automatizacion RCP      │")
+		fmt.Println("  └──────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── CATEGORIZACION DE ARTICULOS ──────────┐")
+		fmt.Println("  │  [18] Cargar SUBFAM a SQL                 │")
+		fmt.Println("  │  [19] Ejecutar SUBFAM modo automatico     │")
+		fmt.Println("  │  [20] Configurar automatizacion SUBFAM    │")
+		fmt.Println("  └──────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── CUENTAS POR PAGAR (CxP) ──────────────┐")
+		fmt.Println("  │  [23] Cargar CxP a SQL                    │")
+		fmt.Println("  │  [24] Ejecutar CxP modo automatico        │")
+		fmt.Println("  │  [25] Configurar automatizacion CxP       │")
+		fmt.Println("  └───────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── ESPEJO DBF → SQL SERVER ──────────────┐")
+		fmt.Println("  │  [26] Cargar espejo (Data + Datos)        │")
+		fmt.Println("  └───────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  ┌──── OFERTAS (ofer001) ────────────────────┐")
+		fmt.Println("  │  [27] Cargar OFERTAS a SQL                │")
+		fmt.Println("  │  [28] Ejecutar OFERTAS modo automatico    │")
+		fmt.Println("  │  [29] Configurar automatizacion OFERTAS   │")
+		fmt.Println("  └───────────────────────────────────────────┘")
+		fmt.Println()
+		fmt.Println("  [7] Ver historial de ejecuciones")
+		fmt.Println("  [0] Salir")
 		fmt.Println()
 
 		op := leerEntero("  Seleccione: ")
@@ -215,6 +515,50 @@ func menuPrincipal() {
 			MenuConfigCA()
 		case 7:
 			verHistorial()
+		case 8:
+			menuEstad()
+		case 9:
+			ejecutarAutomaticoEstadManual()
+		case 10:
+			MenuConfigEstad()
+		case 11:
+			menuEstapago()
+		case 12:
+			ejecutarAutomaticoEstapagoManual()
+		case 13:
+			MenuConfigEstapago()
+		case 14:
+			menuIGTF()
+		case 15:
+			menuRCP()
+		case 16:
+			ejecutarAutomaticoRCPManual()
+		case 17:
+			MenuConfigRCP()
+		case 18:
+			menuCategorizacion()
+		case 19:
+			ejecutarAutomaticoSubFamManual()
+		case 20:
+			MenuConfigSubFam()
+		case 21:
+			menuCA_Fecha()
+		case 22:
+			menuCorregirDepto()
+		case 23:
+			menuCxP()
+		case 24:
+			ejecutarAutomaticoCxPManual()
+		case 25:
+			MenuConfigCxP()
+		case 26:
+			menuEspejo()
+		case 27:
+			menuOfertas()
+		case 28:
+			ejecutarAutomaticoOfertasManual()
+		case 29:
+			MenuConfigOfertas()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
@@ -500,6 +844,132 @@ func menuCA() {
 
 	fmt.Print("\nPresione Enter para salir...")
 	leerLinea()
+}
+
+func menuCA_Fecha() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("\n  *** PANIC: %v ***\n", r)
+		}
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+	}()
+
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println("  CORREGIR CA POR FECHA")
+	fmt.Println(strings.Repeat("=", 60))
+
+	fmt.Println("\nConectando a SQL Server...")
+	db, err := ConectarSQL()
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		return
+	}
+	defer db.Close()
+	fmt.Println("  Conexion exitosa.")
+
+	fmt.Println("\nObteniendo lista de sucursales...")
+	sucursales, err := ObtenerSucursales(db)
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		return
+	}
+	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
+
+	sucursales = seleccionarTiendasCA(sucursales)
+
+	fmt.Println("\nModo de lectura:")
+	fmt.Println("  [1] Servidor S:")
+	fmt.Println("  [2] Tiendas IP")
+	modo := "IP"
+	if leerEntero("Seleccione: ") == 1 {
+		modo = "S"
+	}
+
+	fmt.Println("\nFecha inicio (DD/MM/YYYY): ")
+	fechaInicioStr := leerLinea()
+	fechaInicio, err := time.Parse("02/01/2006", fechaInicioStr)
+	if err != nil {
+		fmt.Printf("  ERROR formato fecha: %v\n", err)
+		return
+	}
+
+	fmt.Println("Fecha fin (DD/MM/YYYY): ")
+	fechaFinStr := leerLinea()
+	fechaFin, err := time.Parse("02/01/2006", fechaFinStr)
+	if err != nil {
+		fmt.Printf("  ERROR formato fecha: %v\n", err)
+		return
+	}
+
+	fechaFin = fechaFin.AddDate(0, 0, 1)
+
+	if fechaFin.Before(fechaInicio) || fechaFin.Equal(fechaInicio) {
+		fmt.Println("  ERROR: La fecha fin debe ser mayor a la fecha inicio.")
+		return
+	}
+
+	dias := int(fechaFin.Sub(fechaInicio).Hours() / 24)
+	fmt.Printf("\n  Rango: %s al %s (%d dias)\n",
+		fechaInicio.Format("02/01/2006"), fechaFin.AddDate(0, 0, -1).Format("02/01/2006"), dias)
+	fmt.Printf("  Tiendas: %d | Modo: %s\n", len(sucursales), modo)
+	fmt.Println(strings.Repeat("-", 40))
+	fmt.Println("  Procesando CA por fecha...")
+
+	ProcesarCAFecha(db, sucursales, fechaInicio.Year(), fechaInicio, fechaFin, modo)
+}
+
+func menuCorregirDepto() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("\n  *** PANIC: %v ***\n", r)
+		}
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+	}()
+
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println("  CORREGIR DEPTO/FAMILIA EN POS_CA")
+	fmt.Println(strings.Repeat("=", 60))
+
+	fmt.Println("\nConectando a SQL Server...")
+	db, err := ConectarSQL()
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		return
+	}
+	defer db.Close()
+	fmt.Println("  Conexion exitosa.")
+
+	fmt.Println("\nObteniendo lista de sucursales...")
+	sucursales, err := ObtenerSucursales(db)
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		return
+	}
+	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
+
+	sucursales = seleccionarTiendasCA(sucursales)
+
+	fmt.Println("\n" + strings.Repeat("-", 40))
+	fmt.Println("  Corrigiendo Depto/Familia...")
+
+	totalActualizados := 0
+	totalPendientes := 0
+	for _, s := range sucursales {
+		fmt.Printf("\n  %s:\n", s.Codigo)
+		act, pend, err := CorregirDeptoFamilia(db, s.Codigo)
+		if err != nil {
+			fmt.Printf("    ERROR: %v\n", err)
+			continue
+		}
+		totalActualizados += act
+		totalPendientes += pend
+		fmt.Printf("    Resultado: %d actualizados, %d pendientes\n", act, pend)
+	}
+
+	fmt.Println(strings.Repeat("-", 40))
+	fmt.Printf("  TOTAL: %d actualizados, %d pendientes\n", totalActualizados, totalPendientes)
 }
 
 func conectarYSucursales(titulo string) (*sql.DB, []Sucursal, int, string) {

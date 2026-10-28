@@ -12,6 +12,16 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 	nombreMes := MesesES[month]
 	diasMes := time.Date(year, time.Month(month+1), 0, 0, 0, 0, 0, time.UTC).Day()
 
+	// Divisor dinámico: si es el mes actual, usar el día de hoy
+	diasDivisor := diasMes
+	now := time.Now()
+	if year == now.Year() && month == int(now.Month()) {
+		diasDivisor = now.Day()
+	}
+	if diasDivisor < 1 {
+		diasDivisor = 1
+	}
+
 	f := excelize.NewFile()
 	defer f.Close()
 
@@ -34,10 +44,11 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 	// ---- Headers ----
 	headers := []string{
 		"TIENDA", "Promedio por factura", "Clientes atendidos en el mes",
-		"Cliente promedio por d\u00eda", "Hora con Mayor movimiento",
+		fmt.Sprintf("Cliente promedio por d\u00eda (%d)", diasDivisor),
+		"Hora con Mayor movimiento",
 		"Clientes atendidos con mayor movimiento", "Hora con menor moviento",
 		"Clientes atendidos con menor movimiento", "Total",
-		fmt.Sprintf("Promedio venta por d\u00eda (%d)", diasMes),
+		fmt.Sprintf("Promedio venta por d\u00eda (%d)", diasDivisor),
 	}
 	hdStyle, _ := f.NewStyle(&excelize.Style{
 		Fill:      excelize.Fill{Type: "pattern", Color: []string{"4472C4"}, Pattern: 1},
@@ -107,7 +118,7 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 		f.SetCellValue(ws, fmt.Sprintf("D%d", row), res.Clientes)
 		f.SetCellStyle(ws, fmt.Sprintf("D%d", row), fmt.Sprintf("D%d", row), bldStyle(sc, 3)) // #,##0
 
-		f.SetCellFormula(ws, fmt.Sprintf("E%d", row), fmt.Sprintf("=D%d/%d", row, diasMes))
+		f.SetCellFormula(ws, fmt.Sprintf("E%d", row), fmt.Sprintf("=D%d/%d", row, diasDivisor))
 		f.SetCellStyle(ws, fmt.Sprintf("E%d", row), fmt.Sprintf("E%d", row), bldStyle(sc, 3)) // #,##0
 
 		f.SetCellValue(ws, fmt.Sprintf("F%d", row), res.HoraMayor)
@@ -125,7 +136,7 @@ func GenerarExcel(resultados []ResultadoTienda, year, month int, outputDir strin
 		f.SetCellValue(ws, fmt.Sprintf("J%d", row), res.Total)
 		f.SetCellStyle(ws, fmt.Sprintf("J%d", row), fmt.Sprintf("J%d", row), bldStyle(sc, 4)) // #,##0.00
 
-		f.SetCellFormula(ws, fmt.Sprintf("K%d", row), fmt.Sprintf("=J%d/%d", row, diasMes))
+		f.SetCellFormula(ws, fmt.Sprintf("K%d", row), fmt.Sprintf("=J%d/%d", row, diasDivisor))
 		f.SetCellStyle(ws, fmt.Sprintf("K%d", row), fmt.Sprintf("K%d", row), bldStyle(sc, 4)) // #,##0.00
 
 		f.SetRowHeight(ws, row, 15.0)
