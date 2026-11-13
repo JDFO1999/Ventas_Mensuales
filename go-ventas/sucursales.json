@@ -1,11 +1,11 @@
 {
-  "ultima_sincronizacion": "2026-10-28 09:10:30",
+  "ultima_sincronizacion": "2026-11-13 17:50:09",
   "tiendas": [
     {
       "Codigo": "AK01",
       "Nombre": "Alkosto 01 (San Felipe)",
       "RutaIP": "10.11.1.81",
-      "RutaDBF": "S:\\aBC-Soft\\Data\\AK01",
+      "RutaDBF": "S:\\aBC-Soft\\Data\\AK01\\",
       "Cia": "001"
     },
     {
@@ -81,7 +81,7 @@
     {
       "Codigo": "FC02",
       "Nombre": "Familia Center 02",
-      "RutaIP": "10.12.2.81",
+      "RutaIP": "10.32.19.81",
       "RutaDBF": "S:\\aBC-Soft\\Data\\FC02\\",
       "Cia": "002"
     },
@@ -95,7 +95,7 @@
     {
       "Codigo": "FC04",
       "Nombre": "Familia Center 04",
-      "RutaIP": "10.12.4.81",
+      "RutaIP": "10.32.51.81",
       "RutaDBF": "S:\\aBC-Soft\\Data\\Fc04\\",
       "Cia": "002"
     },
@@ -137,16 +137,23 @@
     {
       "Codigo": "VC01",
       "Nombre": "Vecinos 01",
-      "RutaIP": "10.15.1.81",
+      "RutaIP": "10.64.3.81",
       "RutaDBF": "S:\\aBC-Soft\\Data\\Vc01\\",
       "Cia": "003"
     },
     {
       "Codigo": "VC02",
       "Nombre": "Vecinos 02",
-      "RutaIP": "10.15.2.81",
+      "RutaIP": "10.64.19.81",
       "RutaDBF": "S:\\aBC-Soft\\Data\\Vc02\\",
       "Cia": "003"
+    },
+    {
+      "Codigo": "VC03",
+      "Nombre": "Vecinos 03",
+      "RutaIP": "10.64.35.81",
+      "RutaDBF": "S:\\aBC-Soft\\Data\\VC03\\",
+      "Cia": "001"
     }
   ]
 }

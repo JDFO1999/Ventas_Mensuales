@@ -40,6 +40,30 @@ type VentaRegistro struct {
 	LIMPRIMIO  bool
 	NroCie     string
 	FechaCie   *time.Time
+	Pago1      string
+	Monto1     float64
+	Banco1     string
+	Pago2      string
+	Monto2     float64
+	Banco2     string
+	Pago3      string
+	Monto3     float64
+	Banco3     string
+	Pago4      string
+	Monto4     float64
+	Banco4     string
+	Pago5      string
+	Monto5     float64
+	Banco5     string
+	Pago6      string
+	Monto6     float64
+	Banco6     string
+	Pago7      string
+	Monto7     float64
+	Banco7     string
+	Pago8      string
+	Monto8     float64
+	Banco8     string
 }
 
 type ResultadoTienda struct {

@@ -150,6 +150,30 @@ func LeerArchivoFC(filepath string, year, month int, tienda string, caja int) (m
 				r.FechaCie = &dt
 			}
 		}
+		r.Pago1 = getStr("PAGO_1", "")
+		r.Monto1 = getFl("MONTO_1")
+		r.Banco1 = getStr("BANCO_1", "")
+		r.Pago2 = getStr("PAGO_2", "")
+		r.Monto2 = getFl("MONTO_2")
+		r.Banco2 = getStr("BANCO_2", "")
+		r.Pago3 = getStr("PAGO_3", "")
+		r.Monto3 = getFl("MONTO_3")
+		r.Banco3 = getStr("BANCO_3", "")
+		r.Pago4 = getStr("PAGO_4", "")
+		r.Monto4 = getFl("MONTO_4")
+		r.Banco4 = getStr("BANCO_4", "")
+		r.Pago5 = getStr("PAGO_5", "")
+		r.Monto5 = getFl("MONTO_5")
+		r.Banco5 = getStr("BANCO_5", "")
+		r.Pago6 = getStr("PAGO_6", "")
+		r.Monto6 = getFl("MONTO_6")
+		r.Banco6 = getStr("BANCO_6", "")
+		r.Pago7 = getStr("PAGO_7", "")
+		r.Monto7 = getFl("MONTO_7")
+		r.Banco7 = getStr("BANCO_7", "")
+		r.Pago8 = getStr("PAGO_8", "")
+		r.Monto8 = getFl("MONTO_8")
+		r.Banco8 = getStr("BANCO_8", "")
 		registros = append(registros, r)
 	}
 

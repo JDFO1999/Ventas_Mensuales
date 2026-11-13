@@ -156,6 +156,30 @@ func CrearTablaPosVentas(db *sql.DB) error {
 			LIMPRIMIO  BIT NULL,
 			NroCie     VARCHAR(8) NULL,
 			FechaCie   DATE NULL,
+			PAGO_1     VARCHAR(2) NULL,
+			MONTO_1    DECIMAL(18,2) NULL,
+			BANCO_1    VARCHAR(2) NULL,
+			PAGO_2     VARCHAR(2) NULL,
+			MONTO_2    DECIMAL(18,2) NULL,
+			BANCO_2    VARCHAR(2) NULL,
+			PAGO_3     VARCHAR(2) NULL,
+			MONTO_3    DECIMAL(18,2) NULL,
+			BANCO_3    VARCHAR(2) NULL,
+			PAGO_4     VARCHAR(2) NULL,
+			MONTO_4    DECIMAL(18,2) NULL,
+			BANCO_4    VARCHAR(2) NULL,
+			PAGO_5     VARCHAR(2) NULL,
+			MONTO_5    DECIMAL(18,2) NULL,
+			BANCO_5    VARCHAR(2) NULL,
+			PAGO_6     VARCHAR(2) NULL,
+			MONTO_6    DECIMAL(18,2) NULL,
+			BANCO_6    VARCHAR(2) NULL,
+			PAGO_7     VARCHAR(2) NULL,
+			MONTO_7    DECIMAL(18,2) NULL,
+			BANCO_7    VARCHAR(2) NULL,
+			PAGO_8     VARCHAR(2) NULL,
+			MONTO_8    DECIMAL(18,2) NULL,
+			BANCO_8    VARCHAR(2) NULL,
 			FechaCarga DATETIME DEFAULT GETDATE(),
 			CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
 		)
@@ -172,6 +196,24 @@ func CrearTablaPosVentas(db *sql.DB) error {
 				) AS rn FROM PosVentas
 			) t WHERE t.rn > 1
 			ALTER TABLE PosVentas ADD CONSTRAINT PK_PosVentas PRIMARY KEY (Tienda, Caja, Numero, Tipo)
+		END
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('PosVentas') AND name = 'PAGO_1')
+		BEGIN
+			ALTER TABLE PosVentas ADD
+				PAGO_1 VARCHAR(2) NULL, MONTO_1 DECIMAL(18,2) NULL, BANCO_1 VARCHAR(2) NULL,
+				PAGO_2 VARCHAR(2) NULL, MONTO_2 DECIMAL(18,2) NULL, BANCO_2 VARCHAR(2) NULL,
+				PAGO_3 VARCHAR(2) NULL, MONTO_3 DECIMAL(18,2) NULL, BANCO_3 VARCHAR(2) NULL,
+				PAGO_4 VARCHAR(2) NULL, MONTO_4 DECIMAL(18,2) NULL, BANCO_4 VARCHAR(2) NULL,
+				PAGO_5 VARCHAR(2) NULL, MONTO_5 DECIMAL(18,2) NULL, BANCO_5 VARCHAR(2) NULL,
+				PAGO_6 VARCHAR(2) NULL, MONTO_6 DECIMAL(18,2) NULL, BANCO_6 VARCHAR(2) NULL,
+				PAGO_7 VARCHAR(2) NULL, MONTO_7 DECIMAL(18,2) NULL, BANCO_7 VARCHAR(2) NULL,
+				PAGO_8 VARCHAR(2) NULL, MONTO_8 DECIMAL(18,2) NULL, BANCO_8 VARCHAR(2) NULL
 		END
 	`)
 	return err
@@ -265,9 +307,13 @@ func InsertarVentas(db *sql.DB, registros []VentaRegistro) error {
 	const chunkSize = 5000
 	query := `INSERT INTO PosVentas (Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Anulada, Operador,
 		SubTotal, MontoUSD, MontoBS, Impuesto, Descuento, IGTF, Redondeo, TasaDOL,
-		CodCli, Nombres, Apellidos, NIT, RIF, CodVen, NroZ, Credito, Vuelto, LIMPRIMIO, NroCie, FechaCie)
+		CodCli, Nombres, Apellidos, NIT, RIF, CodVen, NroZ, Credito, Vuelto, LIMPRIMIO, NroCie, FechaCie,
+		PAGO_1, MONTO_1, BANCO_1, PAGO_2, MONTO_2, BANCO_2, PAGO_3, MONTO_3, BANCO_3, PAGO_4, MONTO_4, BANCO_4,
+		PAGO_5, MONTO_5, BANCO_5, PAGO_6, MONTO_6, BANCO_6, PAGO_7, MONTO_7, BANCO_7, PAGO_8, MONTO_8, BANCO_8)
 		VALUES (?,?,?,?,?,?,?,?,?,
 			?,?,?,?,?,?,?,?,
+			?,?,?,?,?,?,?,?,?,?,?,?,
+			?,?,?,?,?,?,?,?,?,?,?,?,
 			?,?,?,?,?,?,?,?,?,?,?,?)`
 
 	for i := 0; i < len(registros); i += chunkSize {
@@ -292,6 +338,14 @@ func InsertarVentas(db *sql.DB, registros []VentaRegistro) error {
 				r.SubTotal, r.MontoUSD, r.MontoBS, r.Impuesto, r.Descuento, r.IGTF, r.Redondeo, r.TasaDOL,
 				r.CodCli, r.Nombres, r.Apellidos, r.NIT, r.RIF, r.CodVen, r.NroZ,
 				r.Credito, r.Vuelto, r.LIMPRIMIO, r.NroCie, fechaCie,
+				r.Pago1, r.Monto1, r.Banco1,
+				r.Pago2, r.Monto2, r.Banco2,
+				r.Pago3, r.Monto3, r.Banco3,
+				r.Pago4, r.Monto4, r.Banco4,
+				r.Pago5, r.Monto5, r.Banco5,
+				r.Pago6, r.Monto6, r.Banco6,
+				r.Pago7, r.Monto7, r.Banco7,
+				r.Pago8, r.Monto8, r.Banco8,
 			)
 			if err != nil {
 				if strings.Contains(err.Error(), "PRIMARY") ||
