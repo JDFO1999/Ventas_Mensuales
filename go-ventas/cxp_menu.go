@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -243,57 +244,54 @@ func MenuConfigCxP() {
 }
 
 func crearTareaProgramadaCxP(cfg Config) {
-	exeDir, _ := os.Getwd()
-	cmdPath := exeDir + "\\run_ventas_cxp.cmd"
+	exeDir := obtenerDirectorioEjecutable()
+	cmdPath := filepath.Join(exeDir, "run_ventas_cxp.cmd")
+	exePath := filepath.Join(exeDir, "ventas_mensuales.exe")
 
 	cmd := fmt.Sprintf(`@echo off
-REM Ventas Mensuales CxP - Ejecucion automatica
-for /f "tokens=2 delims==" %%%%I in ('wmic os get localdatetime /value') do set datetime=%%%%I
-set ANIO=%%datetime:~0,4%%
-echo [%%date%% %%time%%] CxP Iniciando...
-"%s\ventas_mensuales.exe" --auto-cxp --year=%%ANIO%% --mode=%s
-	echo [%%date%% %%time%%] CxP Completado.
-	pause
-`, exeDir, cfg.Modo)
+cd /d "%%~dp0"
+REM Ventas Mensuales CxP - Ejecucion automatica (Ano actual)
+echo [%%date%% %%time%%] CxP Iniciando (Ano actual)...
+"%%~dp0ventas_mensuales.exe" --auto-cxp --mode=%s
+echo [%%date%% %%time%%] CxP Completado.
+`, cfg.Modo)
 	os.WriteFile(cmdPath, []byte(cmd), 0644)
 
-	psPath := exeDir + "\\setup_scheduler_cxp.ps1"
+	psPath := filepath.Join(exeDir, "setup_scheduler_cxp.ps1")
 	duration := cfg.HoraFin - cfg.HoraInicio
 
-	var psTrigger string
-	if duration <= 0 {
-		psTrigger = fmt.Sprintf(`$trigger = New-ScheduledTaskTrigger -Daily -At "%02d:00"`, cfg.HoraInicio)
-	} else {
-		psTrigger = fmt.Sprintf(
-			`$trigger = New-ScheduledTaskTrigger -Once -At "%02d:00" -RepetitionInterval (New-TimeSpan -Minutes %d) -RepetitionDuration (New-TimeSpan -Hours %d)`,
-			cfg.HoraInicio, cfg.IntervaloMinutos, duration)
-	}
-
+	var psTriggerDef string
 	var psMessage string
 	if duration <= 0 {
-		psMessage = fmt.Sprintf(`Write-Host "Tarea CxP creada: $taskName (diaria %02d:00)"`, cfg.HoraInicio)
+		psTriggerDef = fmt.Sprintf(`$triggers = @(New-ScheduledTaskTrigger -Daily -At "%02d:00")`, cfg.HoraInicio)
+		psMessage = fmt.Sprintf(`Write-Host "Tarea CxP creada: $taskName (diaria %02d:00, siempre ano actual)"`, cfg.HoraInicio)
 	} else {
-		psMessage = fmt.Sprintf(`Write-Host "Tarea CxP creada: $taskName (%02d:00 a %02d:00, cada %d min)"`,
+		psTriggerDef = fmt.Sprintf(
+			`$triggers = @(New-ScheduledTaskTrigger -Once -At "%02d:00" -RepetitionInterval (New-TimeSpan -Minutes %d) -RepetitionDuration (New-TimeSpan -Hours %d))`,
+			cfg.HoraInicio, cfg.IntervaloMinutos, duration)
+		psMessage = fmt.Sprintf(`Write-Host "Tarea CxP creada: $taskName (%02d:00 a %02d:00, cada %d min, siempre ano actual)"`,
 			cfg.HoraInicio, cfg.HoraFin, cfg.IntervaloMinutos)
 	}
 
 	ps := fmt.Sprintf(`
 $taskName = "VentasMensualesCxP"
-$action = New-ScheduledTaskAction -Execute "%s\ventas_mensuales.exe" -Argument '--auto-cxp --year=<YEAR> --mode=%s'
+$exePath = "%s"
+$workDir = "%s"
+$action = New-ScheduledTaskAction -Execute $exePath -Argument '--auto-cxp --mode=%s' -WorkingDirectory $workDir
 %s
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-$loggedUser = (Get-CimInstance -ClassName Win32_ComputerSystem).UserName
-if (-not $loggedUser) { $loggedUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+$loggedUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+if (-not $loggedUser) { $loggedUser = (Get-CimInstance -ClassName Win32_ComputerSystem).UserName }
 $principal = New-ScheduledTaskPrincipal -UserId $loggedUser -LogonType Interactive -RunLevel Highest
 
 try {
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    Register-ScheduledTask -TaskName $taskName -Principal $principal -Trigger $trigger -Action $action -Settings $settings
+    Register-ScheduledTask -TaskName $taskName -Principal $principal -Trigger $triggers -Action $action -Settings $settings
     %s
 } catch {
     Write-Host "ERROR: $_"
 }
-`, exeDir, cfg.Modo, psTrigger, psMessage)
+`, exePath, exeDir, cfg.Modo, psTriggerDef, psMessage)
 	os.WriteFile(psPath, []byte(ps), 0644)
 
 	fmt.Println("\n  Archivos creados:")

@@ -106,6 +106,7 @@ func main() {
 	autoRcpPtr := flag.Bool("auto-rcp", false, "Modo automatico RCP")
 	autoSubFamPtr := flag.Bool("auto-subfam", false, "Modo automatico SUBFAM")
 	autoCxPPtr := flag.Bool("auto-cxp", false, "Modo automatico CxP")
+	setupCxPPtr := flag.Bool("setup-cxp", false, "Configura y registra automaticamente la tarea de CxP en Windows")
 	autoOfertasPtr := flag.Bool("auto-ofertas", false, "Modo automatico OFERTAS")
 	setupOfertasPtr := flag.Bool("setup-ofertas", false, "Configura y registra automaticamente la tarea de ofertas en Windows")
 	espejoPtr := flag.Bool("espejo", false, "Cargar espejo DBF a SQL Server")
@@ -372,6 +373,24 @@ func main() {
 		}
 		cfg := Config{Modo: mode, OutputDir: outputDir}
 		procesarAutomaticoCxP(year, cfg, true)
+		return
+	}
+
+	if *setupCxPPtr {
+		cfg, err := CargarConfig("config_cxp.json")
+		if err != nil {
+			cfg = Config{
+				Modo:             "IP",
+				OutputDir:        outputDir,
+				HoraInicio:       6,
+				HoraFin:          6,
+				IntervaloMinutos: 1440,
+			}
+		}
+		if *modePtr != "" {
+			cfg.Modo = *modePtr
+		}
+		crearTareaProgramadaCxP(cfg)
 		return
 	}
 
