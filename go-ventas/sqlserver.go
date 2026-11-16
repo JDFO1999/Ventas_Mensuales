@@ -1065,6 +1065,61 @@ func CopiarStagingATable(ctx context.Context, db *sql.DB, codigo string) (int64,
 	return totalCopied, nil
 }
 
+// BorrarRangoPosVentasEnBatches elimina registros de PosVentas por rango de fecha en lotes seguros
+func BorrarRangoPosVentasEnBatches(ctx context.Context, db *sql.DB, codigo string, inicio, fin time.Time) (int, error) {
+	db.Exec(`IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PosVentas') AND name = 'IX_PosVentas_Tienda_Fecha')
+		CREATE NONCLUSTERED INDEX IX_PosVentas_Tienda_Fecha ON PosVentas (Tienda, Fecha)`)
+
+	totalBorrado := 0
+	batchSize := 10000
+	maxReintentos := 3
+
+	for {
+		select {
+		case <-ctx.Done():
+			return totalBorrado, fmt.Errorf("DELETE timeout: %v", ctx.Err())
+		default:
+		}
+
+		result, err := db.ExecContext(ctx,
+			fmt.Sprintf("DELETE TOP(%d) FROM PosVentas WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", batchSize),
+			codigo, inicio, fin,
+		)
+		if err != nil {
+			reintentos := 0
+			for reintentos < maxReintentos {
+				select {
+				case <-ctx.Done():
+					return totalBorrado, fmt.Errorf("DELETE timeout: %v", ctx.Err())
+				default:
+				}
+				time.Sleep(2 * time.Second)
+				result, err = db.ExecContext(ctx,
+					fmt.Sprintf("DELETE TOP(%d) FROM PosVentas WHERE Tienda=? AND Fecha >= ? AND Fecha < ?", batchSize),
+					codigo, inicio, fin,
+				)
+				if err == nil {
+					break
+				}
+				reintentos++
+			}
+			if err != nil {
+				return totalBorrado, fmt.Errorf("error borrando de PosVentas (tras %d reintentos): %v", maxReintentos, err)
+			}
+		}
+
+		filas, err := result.RowsAffected()
+		if err != nil {
+			return totalBorrado, fmt.Errorf("error obteniendo filas afectadas: %v", err)
+		}
+		totalBorrado += int(filas)
+		if filas == 0 {
+			break
+		}
+	}
+	return totalBorrado, nil
+}
+
 
 
 

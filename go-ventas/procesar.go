@@ -1801,6 +1801,299 @@ func ProcesarAutoCA(db *sql.DB, sucursales []Sucursal, year, month int, modo str
 	logInfo("CA_AUTO: Completado en %.1f min, %d errores", time.Since(tStart).Minutes(), erroresGlobal)
 }
 
+// ==================== CORREGIR FA POR FECHA ====================
+
+func leerArchivoFCRango(filepath string, inicio, fin time.Time, tienda string, caja int) ([]VentaRegistro, error) {
+	var registros []VentaRegistro
+
+	dbf, err := OpenDBF(filepath)
+	if err != nil {
+		return nil, err
+	}
+	defer dbf.Close()
+
+	if dbf.NumRecords == 0 {
+		return nil, nil
+	}
+
+	ti := dbf.FieldIndex("TIPO")
+	ai := dbf.FieldIndex("ANULADA")
+	if ti < 0 {
+		return nil, nil
+	}
+
+	fi := dbf.FieldIndex("FECHA")
+	if fi < 0 {
+		return nil, nil
+	}
+
+	hi := dbf.FieldIndex("HORA24")
+	if hi < 0 {
+		return nil, nil
+	}
+
+	for i := 0; i < dbf.NumRecords; i++ {
+		rec, err := dbf.ReadRecord(i)
+		if err != nil || len(rec) == 0 {
+			continue
+		}
+		if rec[0] == 0x2A {
+			continue
+		}
+
+		tipo := dbf.GetString(rec, dbf.Fields[ti])
+		if tipo != "FA" && tipo != "DV" {
+			continue
+		}
+		if ai >= 0 && dbf.GetString(rec, dbf.Fields[ai]) == "T" {
+			continue
+		}
+
+		fecha, ok := dbf.GetDate(rec, dbf.Fields[fi])
+		if !ok || fecha.Before(inicio) || !fecha.Before(fin) {
+			continue
+		}
+
+		hora, ok := dbf.GetTime(rec, dbf.Fields[hi])
+		if !ok {
+			continue
+		}
+
+		montoUSD := 0.0
+		if mi := dbf.FieldIndex("MONTOFACDL"); mi >= 0 {
+			montoUSD = dbf.GetFloat(rec, dbf.Fields[mi])
+		}
+
+		r := VentaRegistro{Fecha: fecha, Hora: hora, Tipo: tipo, MontoUSD: montoUSD, Tienda: tienda, Caja: caja}
+		getStr := func(name string, def string) string {
+			if idx := dbf.FieldIndex(name); idx >= 0 {
+				return strings.TrimSpace(dbf.GetString(rec, dbf.Fields[idx]))
+			}
+			return def
+		}
+		getFl := func(name string) float64 {
+			if idx := dbf.FieldIndex(name); idx >= 0 {
+				return dbf.GetFloat(rec, dbf.Fields[idx])
+			}
+			return 0
+		}
+
+		r.STipo = getStr("STIPO", "")
+		r.Numero = getStr("NUMERO", "")
+		r.Anulada = getStr("ANULADA", "")
+		r.Operador = getStr("OPERADOR", "")
+		r.SubTotal = getFl("SUBTOTAL")
+		r.MontoBS = getFl("MONTOFAC")
+		r.Impuesto = getFl("IMPUESTO")
+		r.Descuento = getFl("DESCUENTO")
+		r.IGTF = getFl("IGTF")
+		r.Redondeo = getFl("REDONDEO")
+		r.TasaDOL = getFl("TASADOL")
+		r.CodCli = getStr("CODCLI", "")
+		r.Nombres = getStr("NOMBRES", "")
+		r.Apellidos = getStr("APELLIDOS", "")
+		r.NIT = getStr("NIT", "")
+		r.RIF = getStr("RIF", "")
+		r.CodVen = getStr("CODVEN", "")
+		r.NroZ = getStr("NRO_Z", "")
+		if cri := dbf.FieldIndex("CREDITO"); cri >= 0 {
+			r.Credito = dbf.GetBool(rec, dbf.Fields[cri])
+		}
+		r.Vuelto = getFl("VUELTO")
+		if lim := dbf.FieldIndex("LIMPRIMIO"); lim >= 0 {
+			r.LIMPRIMIO = dbf.GetBool(rec, dbf.Fields[lim])
+		}
+		r.NroCie = getStr("NRO_CIE", "")
+		if dci := dbf.FieldIndex("DATE_CIE"); dci >= 0 {
+			if dt, ok := dbf.GetDate(rec, dbf.Fields[dci]); ok {
+				r.FechaCie = &dt
+			}
+		}
+
+		r.Pago1 = getStr("PAGO_1", "")
+		r.Monto1 = getFl("MONTO_1")
+		r.Banco1 = getStr("BANCO_1", "")
+		r.Pago2 = getStr("PAGO_2", "")
+		r.Monto2 = getFl("MONTO_2")
+		r.Banco2 = getStr("BANCO_2", "")
+		r.Pago3 = getStr("PAGO_3", "")
+		r.Monto3 = getFl("MONTO_3")
+		r.Banco3 = getStr("BANCO_3", "")
+		r.Pago4 = getStr("PAGO_4", "")
+		r.Monto4 = getFl("MONTO_4")
+		r.Banco4 = getStr("BANCO_4", "")
+		r.Pago5 = getStr("PAGO_5", "")
+		r.Monto5 = getFl("MONTO_5")
+		r.Banco5 = getStr("BANCO_5", "")
+		r.Pago6 = getStr("PAGO_6", "")
+		r.Monto6 = getFl("MONTO_6")
+		r.Banco6 = getStr("BANCO_6", "")
+		r.Pago7 = getStr("PAGO_7", "")
+		r.Monto7 = getFl("MONTO_7")
+		r.Banco7 = getStr("BANCO_7", "")
+		r.Pago8 = getStr("PAGO_8", "")
+		r.Monto8 = getFl("MONTO_8")
+		r.Banco8 = getStr("BANCO_8", "")
+
+		registros = append(registros, r)
+	}
+
+	return registros, nil
+}
+
+func LeerDBFRangoCompletoFA(store Sucursal, inicio, fin time.Time, modo string) ([]VentaRegistro, error) {
+	posDirs, err := ListarPOS(store.Codigo, store.RutaIP, store.RutaDBF, modo)
+	if err != nil {
+		if modo == "S" && store.RutaIP != "" {
+			posDirs, err = ListarPOS(store.Codigo, store.RutaIP, store.RutaDBF, "IP")
+			if err == nil {
+				modo = "IP"
+			}
+		} else if modo == "IP" {
+			posDirs, err = ListarPOS(store.Codigo, store.RutaIP, store.RutaDBF, "S")
+			if err == nil {
+				modo = "S"
+			}
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("ruta no accesible: %v", err)
+	}
+
+	var todosRegs []VentaRegistro
+	for _, dirName := range posDirs {
+		posNum, errPos := strconv.Atoi(dirName[3:])
+		if errPos != nil {
+			continue
+		}
+
+		var posPath string
+		if modo == "S" {
+			if store.RutaDBF != "" {
+				posPath = strings.TrimRight(store.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
+			} else {
+				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", store.Codigo, dirName)
+			}
+		} else {
+			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", store.RutaIP, dirName)
+		}
+
+		for y := inicio.Year(); y <= fin.Year(); y++ {
+			dbfPath := filepath.Join(posPath, fmt.Sprintf("FC%02d%d.DBF", posNum, y))
+			if _, errStat := os.Stat(dbfPath); errStat != nil {
+				continue
+			}
+
+			for intento := 1; intento <= 3; intento++ {
+				if intento > 1 {
+					time.Sleep(time.Duration(intento) * time.Second)
+				}
+				regs, errLectura := leerArchivoFCRango(dbfPath, inicio, fin, store.Codigo, posNum)
+				if errLectura != nil {
+					continue
+				}
+				if len(regs) > 0 {
+					todosRegs = append(todosRegs, regs...)
+				}
+				break
+			}
+		}
+	}
+	return todosRegs, nil
+}
+
+func deduplicarRegistrosFA(regs []VentaRegistro) []VentaRegistro {
+	seen := make(map[string]VentaRegistro, len(regs))
+	for _, r := range regs {
+		key := fmt.Sprintf("%s|%d|%s|%s", r.Tienda, r.Caja, r.Numero, r.Tipo)
+		seen[key] = r
+	}
+	res := make([]VentaRegistro, 0, len(seen))
+	for _, r := range seen {
+		res = append(res, r)
+	}
+	return res
+}
+
+func ProcesarFAFecha(db *sql.DB, sucursales []Sucursal, inicio, fin time.Time, modo string) {
+	CrearTablaPosVentas(db)
+	CrearTablaH_Tiendas(db)
+
+	logInfo("FA_FECHA: Iniciando %d tiendas, rango %s a %s, modo=%s", len(sucursales),
+		inicio.Format("02/01/2006"), fin.AddDate(0, 0, -1).Format("02/01/2006"), modo)
+	tStart := time.Now()
+
+	totalProcesadas := 0
+	erroresGlobal := 0
+
+	for i, store := range sucursales {
+		mStart := time.Now()
+		fmt.Printf("\n[%d/%d] %s (%s):\n", i+1, len(sucursales), store.Codigo, store.Nombre)
+
+		// PASO 1: Leer todos los DBFs del rango
+		fmt.Printf("  %s  Leyendo archivos FC*.DBF...\n", store.Codigo)
+		todosRegs, errDBF := LeerDBFRangoCompletoFA(store, inicio, fin, modo)
+		if errDBF != nil {
+			logError("FA_FECHA: %s error leyendo DBFs: %v", store.Codigo, errDBF)
+			InsertarH_Tiendas(db, store.Codigo, inicio.Year(), int(inicio.Month()), 0, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "FA")
+			erroresGlobal++
+			fmt.Printf("  %s  ERROR al leer DBF: %v\n", store.Codigo, errDBF)
+			continue
+		}
+
+		totalDBF := len(todosRegs)
+		if totalDBF == 0 {
+			logInfo("FA_FECHA: %s sin datos DBF en rango", store.Codigo)
+			InsertarH_Tiendas(db, store.Codigo, inicio.Year(), int(inicio.Month()), 0, 0, 0, "SIN_DATOS", int(time.Since(mStart).Seconds()), modo, "MANUAL", "FA")
+			fmt.Printf("  %s  Sin datos DBF en el rango seleccionado\n", store.Codigo)
+			continue
+		}
+
+		dedupRegs := deduplicarRegistrosFA(todosRegs)
+		fmt.Printf("  %s  DBF: %d facturas leidas (%d unicas)\n", store.Codigo, totalDBF, len(dedupRegs))
+
+		// PASO 2: Borrar datos actuales en SQL para el rango
+		fmt.Printf("  %s  Borrando registros en SQL (%s al %s)...\n",
+			store.Codigo, inicio.Format("02/01/2006"), fin.AddDate(0, 0, -1).Format("02/01/2006"))
+		ctxDel, cancelDel := context.WithTimeout(context.Background(), 10*time.Minute)
+		borrados, delErr := BorrarRangoPosVentasEnBatches(ctxDel, db, store.Codigo, inicio, fin)
+		cancelDel()
+
+		if delErr != nil {
+			logError("FA_FECHA: %s error borrando: %v", store.Codigo, delErr)
+			InsertarH_Tiendas(db, store.Codigo, inicio.Year(), int(inicio.Month()), totalDBF, 0, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "FA")
+			erroresGlobal++
+			fmt.Printf("  %s  ERROR borrando en SQL: %v\n", store.Codigo, delErr)
+			continue
+		}
+		fmt.Printf("  %s  Borrados %d registros anteriores en SQL\n", store.Codigo, borrados)
+
+		// PASO 3: Insertar registros completos en PosVentas
+		fmt.Printf("  %s  Insertando %d facturas en SQL (con formas de pago)...\n", store.Codigo, len(dedupRegs))
+		if err := InsertarVentas(db, dedupRegs); err != nil {
+			logError("FA_FECHA: %s error insertando en PosVentas: %v", store.Codigo, err)
+			InsertarH_Tiendas(db, store.Codigo, inicio.Year(), int(inicio.Month()), totalDBF, borrados, 0, "ERROR", int(time.Since(mStart).Seconds()), modo, "MANUAL", "FA")
+			erroresGlobal++
+			fmt.Printf("  %s  ERROR insertando en SQL: %v\n", store.Codigo, err)
+			continue
+		}
+
+		duracionSec := int(time.Since(mStart).Seconds())
+		InsertarH_Tiendas(db, store.Codigo, inicio.Year(), int(inicio.Month()), totalDBF, borrados, len(dedupRegs), "OK", duracionSec, modo, "MANUAL", "FA")
+		logInfo("FA_FECHA: %s OK (%d facturas cargadas en %ds)", store.Codigo, len(dedupRegs), duracionSec)
+		fmt.Printf("  %s  OK completado en %ds\n", store.Codigo, duracionSec)
+		totalProcesadas += len(dedupRegs)
+	}
+
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Printf("  FA POR FECHA COMPLETADO en %.1f min.\n", time.Since(tStart).Minutes())
+	fmt.Printf("  Total facturas cargadas: %d\n", totalProcesadas)
+	if erroresGlobal > 0 {
+		fmt.Printf("  Tiendas con error: %d\n", erroresGlobal)
+	}
+	fmt.Println(strings.Repeat("=", 60))
+}
+
 
 
 

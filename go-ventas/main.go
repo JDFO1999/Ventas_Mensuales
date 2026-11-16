@@ -120,6 +120,7 @@ func main() {
 	fechaInicioPtr := flag.String("fecha-inicio", "", "Fecha inicio DD/MM/YYYY (para --ca-fecha)")
 	fechaFinPtr := flag.String("fecha-fin", "", "Fecha fin DD/MM/YYYY (para --ca-fecha)")
 	storesPtr := flag.String("stores", "", "Tiendas separadas por coma (ej: AK04,AK05,AK07)")
+	faFechaPtr := flag.Bool("fa-fecha", false, "FA por fecha rango (borra y recarga)")
 	flag.Parse()
 
 	if *configPtr {
@@ -261,6 +262,73 @@ func main() {
 		}
 
 		ProcesarCAFecha(db, sucursales, fechaInicio.Year(), fechaInicio, fechaFin, mode)
+		return
+	}
+
+	if *faFechaPtr {
+		mode := *modePtr
+		if mode == "" {
+			cfg, err := CargarConfig("config.json")
+			if err != nil {
+				fmt.Println("ERROR: Sin config. Ejecute --config primero.")
+				return
+			}
+			mode = cfg.Modo
+		}
+
+		fechaInicioStr := *fechaInicioPtr
+		fechaFinStr := *fechaFinPtr
+		if fechaInicioStr == "" || fechaFinStr == "" {
+			fmt.Println("ERROR: --fa-fecha requiere --fecha-inicio y --fecha-fin (DD/MM/YYYY)")
+			return
+		}
+		fechaInicio, err := time.Parse("02/01/2006", fechaInicioStr)
+		if err != nil {
+			fmt.Printf("ERROR formato fecha inicio: %v\n", err)
+			return
+		}
+		fechaFin, err := time.Parse("02/01/2006", fechaFinStr)
+		if err != nil {
+			fmt.Printf("ERROR formato fecha fin: %v\n", err)
+			return
+		}
+		fechaFin = fechaFin.AddDate(0, 0, 1)
+
+		fmt.Printf("FA FECHA: %s al %s, modo=%s\n", fechaInicio.Format("02/01/2006"), fechaFin.AddDate(0, 0, -1).Format("02/01/2006"), mode)
+
+		db, err := ConectarSQL()
+		if err != nil {
+			fmt.Printf("ERROR conexion: %v\n", err)
+			return
+		}
+		defer db.Close()
+
+		allStores, err := ObtenerSucursales(db)
+		if err != nil {
+			fmt.Printf("ERROR obtener tiendas: %v\n", err)
+			return
+		}
+
+		storesFilter := *storesPtr
+		var sucursales []Sucursal
+		if storesFilter != "" {
+			selected := strings.Split(storesFilter, ",")
+			for _, s := range selected {
+				s = strings.TrimSpace(s)
+				for _, store := range allStores {
+					if strings.EqualFold(store.Codigo, s) {
+						sucursales = append(sucursales, store)
+						break
+					}
+				}
+			}
+			fmt.Printf("Tiendas seleccionadas: %d\n", len(sucursales))
+		} else {
+			sucursales = allStores
+			fmt.Printf("Todas las tiendas: %d\n", len(sucursales))
+		}
+
+		ProcesarFAFecha(db, sucursales, fechaInicio, fechaFin, mode)
 		return
 	}
 
@@ -464,6 +532,7 @@ func menuPrincipal() {
 		fmt.Println("  │  [2] Configurar automatizacion FA        │")
 		fmt.Println("  │  [3] Ejecutar FA modo automatico         │")
 		fmt.Println("  │  [14] Insertar IGTF (Formas de pago)     │")
+		fmt.Println("  │  [30] Corregir FA por fecha              │")
 		fmt.Println("  └──────────────────────────────────────────┘")
 		fmt.Println()
 		fmt.Println("  ┌──── DETALLE PRODUCTOS (CA) ──────────────┐")
@@ -578,6 +647,8 @@ func menuPrincipal() {
 			ejecutarAutomaticoOfertasManual()
 		case 29:
 			MenuConfigOfertas()
+		case 30:
+			menuFA_Fecha()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
@@ -863,6 +934,79 @@ func menuCA() {
 
 	fmt.Print("\nPresione Enter para salir...")
 	leerLinea()
+}
+
+func menuFA_Fecha() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("\n  *** PANIC FA FECHA: %v ***\n", r)
+		}
+		fmt.Print("\nPresione Enter para salir...")
+		leerLinea()
+	}()
+
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println("  CORREGIR FACTURAS (FA) POR FECHA (BORRA Y RECARGA)")
+	fmt.Println(strings.Repeat("=", 60))
+
+	fmt.Println("\nConectando a SQL Server...")
+	db, err := ConectarSQL()
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		return
+	}
+	defer db.Close()
+	fmt.Println("  Conexion exitosa.")
+
+	fmt.Println("\nObteniendo lista de sucursales...")
+	sucursales, err := ObtenerSucursales(db)
+	if err != nil {
+		fmt.Printf("  ERROR: %v\n", err)
+		return
+	}
+	fmt.Printf("  %d sucursales activas.\n", len(sucursales))
+
+	sucursales = seleccionarTiendasCA(sucursales)
+
+	fmt.Println("\nModo de lectura:")
+	fmt.Println("  [1] Servidor S:")
+	fmt.Println("  [2] Tiendas IP")
+	modo := "IP"
+	if leerEntero("Seleccione: ") == 1 {
+		modo = "S"
+	}
+
+	fmt.Print("\nFecha inicio (DD/MM/YYYY): ")
+	fechaInicioStr := strings.TrimSpace(leerLinea())
+	fechaInicio, err := time.Parse("02/01/2006", fechaInicioStr)
+	if err != nil {
+		fmt.Printf("  ERROR formato fecha inicio: %v\n", err)
+		return
+	}
+
+	fmt.Print("Fecha fin (DD/MM/YYYY): ")
+	fechaFinStr := strings.TrimSpace(leerLinea())
+	fechaFin, err := time.Parse("02/01/2006", fechaFinStr)
+	if err != nil {
+		fmt.Printf("  ERROR formato fecha fin: %v\n", err)
+		return
+	}
+
+	fechaFin = fechaFin.AddDate(0, 0, 1)
+
+	if fechaFin.Before(fechaInicio) || fechaFin.Equal(fechaInicio) {
+		fmt.Println("  ERROR: La fecha fin debe ser mayor o igual a la fecha inicio.")
+		return
+	}
+
+	dias := int(fechaFin.Sub(fechaInicio).Hours() / 24)
+	fmt.Printf("\n  Rango: %s al %s (%d dias)\n",
+		fechaInicio.Format("02/01/2006"), fechaFin.AddDate(0, 0, -1).Format("02/01/2006"), dias)
+	fmt.Printf("  Tiendas: %d | Modo: %s\n", len(sucursales), modo)
+	fmt.Println(strings.Repeat("-", 60))
+	fmt.Println("  Iniciando proceso: Borrado de SQL y recarga desde DBF...")
+
+	ProcesarFAFecha(db, sucursales, fechaInicio, fechaFin, modo)
 }
 
 func menuCA_Fecha() {
