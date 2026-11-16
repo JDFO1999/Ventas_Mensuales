@@ -120,7 +120,6 @@ func main() {
 	fechaInicioPtr := flag.String("fecha-inicio", "", "Fecha inicio DD/MM/YYYY (para --ca-fecha)")
 	fechaFinPtr := flag.String("fecha-fin", "", "Fecha fin DD/MM/YYYY (para --ca-fecha)")
 	storesPtr := flag.String("stores", "", "Tiendas separadas por coma (ej: AK04,AK05,AK07)")
-	upsertFaPtr := flag.Bool("upsert-fa", false, "Ejecutar UPSERT/MERGE de formas de pago en PosVentas")
 	flag.Parse()
 
 	if *configPtr {
@@ -426,70 +425,6 @@ func main() {
 		return
 	}
 
-	if *upsertFaPtr {
-		month := *monthPtr
-		year := *yearPtr
-		mode := *modePtr
-
-		if month == 0 || year == 0 {
-			now := time.Now()
-			month = int(now.Month())
-			year = now.Year()
-		}
-		if mode == "" {
-			if cfg, err := CargarConfig("config.json"); err == nil {
-				mode = cfg.Modo
-			} else {
-				mode = "IP"
-			}
-		}
-
-		db, err := ConectarSQL()
-		if err != nil {
-			fmt.Printf("ERROR conexion SQL: %v\n", err)
-			return
-		}
-		defer db.Close()
-
-		sucursales, err := ObtenerSucursales(db)
-		if err != nil {
-			fmt.Printf("ERROR obteniendo sucursales: %v\n", err)
-			return
-		}
-
-		storesFilter := *storesPtr
-		if storesFilter != "" {
-			selected := strings.Split(storesFilter, ",")
-			var filtered []Sucursal
-			for _, st := range selected {
-				st = strings.TrimSpace(st)
-				for _, s := range sucursales {
-					if strings.EqualFold(s.Codigo, st) {
-						filtered = append(filtered, s)
-						break
-					}
-				}
-			}
-			sucursales = filtered
-		}
-
-		fmt.Printf("UPSERT FA: %s %d (%d tiendas, modo=%s)\n", MesesES[month], year, len(sucursales), mode)
-		tStart := time.Now()
-		totalLeidas := 0
-		for i, s := range sucursales {
-			tStore := time.Now()
-			leidas, _, err := ProcesarTiendaFA_Upsert(s, db, year, month, mode)
-			if err != nil {
-				fmt.Printf("  [%2d/%2d] %-6s - ERROR: %v (%.1fs)\n", i+1, len(sucursales), s.Codigo, err, time.Since(tStore).Seconds())
-			} else {
-				totalLeidas += leidas
-				fmt.Printf("  [%2d/%2d] %-6s - %d facturas (%.1fs)\n", i+1, len(sucursales), s.Codigo, leidas, time.Since(tStore).Seconds())
-			}
-		}
-		fmt.Printf("Completado en %.1f min. Total: %d facturas.\n", time.Since(tStart).Minutes(), totalLeidas)
-		return
-	}
-
 	menuPrincipal()
 }
 
@@ -529,7 +464,6 @@ func menuPrincipal() {
 		fmt.Println("  │  [2] Configurar automatizacion FA        │")
 		fmt.Println("  │  [3] Ejecutar FA modo automatico         │")
 		fmt.Println("  │  [14] Insertar IGTF (Formas de pago)     │")
-		fmt.Println("  │  [30] Actualizar Pagos FA (UPSERT/MERGE) │")
 		fmt.Println("  └──────────────────────────────────────────┘")
 		fmt.Println()
 		fmt.Println("  ┌──── DETALLE PRODUCTOS (CA) ──────────────┐")
@@ -644,74 +578,11 @@ func menuPrincipal() {
 			ejecutarAutomaticoOfertasManual()
 		case 29:
 			MenuConfigOfertas()
-		case 30:
-			menuUpsertFA()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
 		}
 	}
-}
-
-func menuUpsertFA() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("\n  *** PANIC UPSERT FA: %v ***\n", r)
-		}
-		fmt.Print("\nPresione Enter para salir...")
-		leerLinea()
-	}()
-
-	db, sucursales, anio, modo := conectarYSucursales("ACTUALIZAR FORMAS DE PAGO FA (UPSERT / MERGE)")
-	if db == nil {
-		return
-	}
-	defer db.Close()
-
-	mes := leerEntero("Mes a actualizar (1-12): ")
-	if mes < 1 || mes > 12 {
-		fmt.Println("  ERROR: Mes invalido.")
-		return
-	}
-
-	sucursales = seleccionarTiendasCA(sucursales)
-
-	fmt.Println("\n" + strings.Repeat("-", 50))
-	fmt.Printf("  Iniciando UPSERT/MERGE Formas de Pago: %s %d (%d tiendas, modo=%s)\n",
-		MesesES[mes], anio, len(sucursales), modo)
-	fmt.Println(strings.Repeat("-", 50))
-
-	tStart := time.Now()
-	totalLeidas := 0
-	totalMerged := int64(0)
-	errores := 0
-
-	for i, s := range sucursales {
-		tStore := time.Now()
-		fmt.Printf("  [%2d/%2d] %-6s - Leyendo DBFs y cargando staging...\n", i+1, len(sucursales), s.Codigo)
-		leidas, merged, err := ProcesarTiendaFA_Upsert(s, db, anio, mes, modo)
-		if err != nil {
-			fmt.Printf("  [%2d/%2d] %-6s - ERROR: %v (%.1fs)\n", i+1, len(sucursales), s.Codigo, err, time.Since(tStore).Seconds())
-			errores++
-			continue
-		}
-		if leidas == 0 {
-			fmt.Printf("  [%2d/%2d] %-6s - Sin datos DBF (%.1fs)\n", i+1, len(sucursales), s.Codigo, time.Since(tStore).Seconds())
-			continue
-		}
-		totalLeidas += leidas
-		totalMerged += merged
-		fmt.Printf("  [%2d/%2d] %-6s - %d facturas procesadas (MERGE OK, %.1fs)\n",
-			i+1, len(sucursales), s.Codigo, leidas, time.Since(tStore).Seconds())
-	}
-
-	fmt.Println("\n" + strings.Repeat("=", 50))
-	fmt.Printf("  UPSERT/MERGE COMPLETADO en %.1f min.\n", time.Since(tStart).Minutes())
-	fmt.Printf("  Total facturas procesadas: %d\n", totalLeidas)
-	if errores > 0 {
-		fmt.Printf("  Tiendas con error: %d\n", errores)
-	}
-	fmt.Println(strings.Repeat("=", 50))
 }
 
 func ejecutarAutomaticoManual() {

@@ -1801,79 +1801,7 @@ func ProcesarAutoCA(db *sql.DB, sucursales []Sucursal, year, month int, modo str
 	logInfo("CA_AUTO: Completado en %.1f min, %d errores", time.Since(tStart).Minutes(), erroresGlobal)
 }
 
-// ProcesarTiendaFA_Upsert ejecuta el proceso de UPSERT/MERGE en bloque para una tienda
-func ProcesarTiendaFA_Upsert(sucursal Sucursal, db *sql.DB, year, month int, modo string) (int, int64, error) {
-	codigo := sucursal.Codigo
-	posDirs, err := ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, modo)
-	if err != nil {
-		if modo == "S" && sucursal.RutaIP != "" {
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "IP")
-			if err == nil {
-				modo = "IP"
-			}
-		} else if modo == "IP" {
-			posDirs, err = ListarPOS(codigo, sucursal.RutaIP, sucursal.RutaDBF, "S")
-			if err == nil {
-				modo = "S"
-			}
-		}
-	}
-	if err != nil {
-		return 0, 0, fmt.Errorf("ruta no accesible: %v", err)
-	}
 
-	var todosRegs []VentaRegistro
-	for _, dirName := range posDirs {
-		posNum, err := strconv.Atoi(dirName[3:])
-		if err != nil {
-			continue
-		}
-
-		var posPath string
-		if modo == "S" {
-			if sucursal.RutaDBF != "" {
-				posPath = strings.TrimRight(sucursal.RutaDBF, "\\") + "\\CIERRE_POS\\" + dirName
-			} else {
-				posPath = fmt.Sprintf("S:\\aBC-Soft\\Data\\%s\\CIERRE_POS\\%s", codigo, dirName)
-			}
-		} else {
-			posPath = fmt.Sprintf("\\\\%s\\Sistema\\aBC-Soft\\Cierre_POS\\%s", sucursal.RutaIP, dirName)
-		}
-
-		dbfPath := filepath.Join(posPath, fmt.Sprintf("FC%02d%d.DBF", posNum, year))
-		if _, err := os.Stat(dbfPath); err != nil {
-			continue
-		}
-
-		_, _, _, _, regs, err := LeerArchivoFC(dbfPath, year, month, codigo, posNum)
-		if err != nil {
-			continue
-		}
-		todosRegs = append(todosRegs, regs...)
-	}
-
-	if len(todosRegs) == 0 {
-		return 0, 0, nil
-	}
-
-	defer LimpiarStagingFA(db, codigo)
-	if err := CrearTablaStagingFA(db, codigo); err != nil {
-		return 0, 0, err
-	}
-
-	if err := CargarFADBFEnStaging(db, todosRegs, codigo); err != nil {
-		return 0, 0, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	merged, err := MergeStagingAPosVentas(ctx, db, codigo)
-	if err != nil {
-		return len(todosRegs), 0, err
-	}
-
-	return len(todosRegs), merged, nil
-}
 
 
 
