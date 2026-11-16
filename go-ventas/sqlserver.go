@@ -1065,4 +1065,118 @@ func CopiarStagingATable(ctx context.Context, db *sql.DB, codigo string) (int64,
 	return totalCopied, nil
 }
 
+// ==================== FA STAGING & UPSERT/MERGE ====================
+
+func CrearTablaStagingFA(db *sql.DB, codigo string) error {
+	stgTable := "PosVentas_STG_" + codigo
+	db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", stgTable))
+	_, err := db.Exec(fmt.Sprintf(`SELECT * INTO %s FROM PosVentas WHERE 1=0`, stgTable))
+	if err != nil {
+		return fmt.Errorf("error creando staging FA: %v", err)
+	}
+	return nil
+}
+
+func LimpiarStagingFA(db *sql.DB, codigo string) {
+	stgTable := "PosVentas_STG_" + codigo
+	db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", stgTable))
+}
+
+func CargarFADBFEnStaging(db *sql.DB, registros []VentaRegistro, codigo string) error {
+	if len(registros) == 0 {
+		return nil
+	}
+	stgTable := "PosVentas_STG_" + codigo
+
+	cols := []string{
+		"Fecha", "Hora", "Tienda", "Caja", "Tipo", "STipo", "Numero", "Anulada", "Operador",
+		"SubTotal", "MontoUSD", "MontoBS", "Impuesto", "Descuento", "IGTF", "Redondeo", "TasaDOL",
+		"CodCli", "Nombres", "Apellidos", "NIT", "RIF", "CodVen", "NroZ", "Credito", "Vuelto", "LIMPRIMIO", "NroCie", "FechaCie",
+		"PAGO_1", "MONTO_1", "BANCO_1", "PAGO_2", "MONTO_2", "BANCO_2", "PAGO_3", "MONTO_3", "BANCO_3", "PAGO_4", "MONTO_4", "BANCO_4",
+		"PAGO_5", "MONTO_5", "BANCO_5", "PAGO_6", "MONTO_6", "BANCO_6", "PAGO_7", "MONTO_7", "BANCO_7", "PAGO_8", "MONTO_8", "BANCO_8",
+	}
+
+	copyStmt := mssql.CopyIn(stgTable, mssql.BulkOptions{}, cols...)
+	bulkStmt, err := db.Prepare(copyStmt)
+	if err != nil {
+		return fmt.Errorf("preparando bulk copy staging FA: %v", err)
+	}
+
+	for i, r := range registros {
+		var fechaCie interface{}
+		if r.FechaCie != nil {
+			fechaCie = *r.FechaCie
+		}
+		_, err := bulkStmt.Exec(
+			r.Fecha, r.Hora, r.Tienda, r.Caja, r.Tipo, r.STipo, r.Numero, r.Anulada, r.Operador,
+			r.SubTotal, r.MontoUSD, r.MontoBS, r.Impuesto, r.Descuento, r.IGTF, r.Redondeo, r.TasaDOL,
+			r.CodCli, r.Nombres, r.Apellidos, r.NIT, r.RIF, r.CodVen, r.NroZ, r.Credito, r.Vuelto, r.LIMPRIMIO, r.NroCie, fechaCie,
+			r.Pago1, r.Monto1, r.Banco1,
+			r.Pago2, r.Monto2, r.Banco2,
+			r.Pago3, r.Monto3, r.Banco3,
+			r.Pago4, r.Monto4, r.Banco4,
+			r.Pago5, r.Monto5, r.Banco5,
+			r.Pago6, r.Monto6, r.Banco6,
+			r.Pago7, r.Monto7, r.Banco7,
+			r.Pago8, r.Monto8, r.Banco8,
+		)
+		if err != nil {
+			bulkStmt.Close()
+			return fmt.Errorf("bulk copy staging FA fila %d: %v", i, err)
+		}
+	}
+
+	_, err = bulkStmt.Exec()
+	bulkStmt.Close()
+	if err != nil {
+		return fmt.Errorf("finalizando bulk copy staging FA: %v", err)
+	}
+	return nil
+}
+
+func MergeStagingAPosVentas(ctx context.Context, db *sql.DB, codigo string) (int64, error) {
+	stgTable := "PosVentas_STG_" + codigo
+
+	db.Exec(fmt.Sprintf("CREATE INDEX IX_STG_PK ON %s (Tienda, Caja, Numero, Tipo)", stgTable))
+
+	mergeQuery := fmt.Sprintf(`
+		WITH SourceDedup AS (
+			SELECT *, ROW_NUMBER() OVER(PARTITION BY Tienda, Caja, Numero, Tipo ORDER BY Fecha DESC, Hora DESC) AS _rn
+			FROM %s
+		)
+		MERGE PosVentas AS target
+		USING (SELECT * FROM SourceDedup WHERE _rn = 1) AS source
+		ON (target.Tienda = source.Tienda AND target.Caja = source.Caja AND target.Numero = source.Numero AND target.Tipo = source.Tipo)
+		WHEN MATCHED THEN
+			UPDATE SET 
+				target.PAGO_1 = source.PAGO_1, target.MONTO_1 = source.MONTO_1, target.BANCO_1 = source.BANCO_1,
+				target.PAGO_2 = source.PAGO_2, target.MONTO_2 = source.MONTO_2, target.BANCO_2 = source.BANCO_2,
+				target.PAGO_3 = source.PAGO_3, target.MONTO_3 = source.MONTO_3, target.BANCO_3 = source.BANCO_3,
+				target.PAGO_4 = source.PAGO_4, target.MONTO_4 = source.MONTO_4, target.BANCO_4 = source.BANCO_4,
+				target.PAGO_5 = source.PAGO_5, target.MONTO_5 = source.MONTO_5, target.BANCO_5 = source.BANCO_5,
+				target.PAGO_6 = source.PAGO_6, target.MONTO_6 = source.MONTO_6, target.BANCO_6 = source.BANCO_6,
+				target.PAGO_7 = source.PAGO_7, target.MONTO_7 = source.MONTO_7, target.BANCO_7 = source.BANCO_7,
+				target.PAGO_8 = source.PAGO_8, target.MONTO_8 = source.MONTO_8, target.BANCO_8 = source.BANCO_8
+		WHEN NOT MATCHED THEN
+			INSERT (Fecha, Hora, Tienda, Caja, Tipo, STipo, Numero, Anulada, Operador,
+				SubTotal, MontoUSD, MontoBS, Impuesto, Descuento, IGTF, Redondeo, TasaDOL,
+				CodCli, Nombres, Apellidos, NIT, RIF, CodVen, NroZ, Credito, Vuelto, LIMPRIMIO, NroCie, FechaCie,
+				PAGO_1, MONTO_1, BANCO_1, PAGO_2, MONTO_2, BANCO_2, PAGO_3, MONTO_3, BANCO_3, PAGO_4, MONTO_4, BANCO_4,
+				PAGO_5, MONTO_5, BANCO_5, PAGO_6, MONTO_6, BANCO_6, PAGO_7, MONTO_7, BANCO_7, PAGO_8, MONTO_8, BANCO_8)
+			VALUES (source.Fecha, source.Hora, source.Tienda, source.Caja, source.Tipo, source.STipo, source.Numero, source.Anulada, source.Operador,
+				source.SubTotal, source.MontoUSD, source.MontoBS, source.Impuesto, source.Descuento, source.IGTF, source.Redondeo, source.TasaDOL,
+				source.CodCli, source.Nombres, source.Apellidos, source.NIT, source.RIF, source.CodVen, source.NroZ, source.Credito, source.Vuelto, source.LIMPRIMIO, source.NroCie, source.FechaCie,
+				source.PAGO_1, source.MONTO_1, source.BANCO_1, source.PAGO_2, source.MONTO_2, source.BANCO_2, source.PAGO_3, source.MONTO_3, source.BANCO_3, source.PAGO_4, source.MONTO_4, source.BANCO_4,
+				source.PAGO_5, source.MONTO_5, source.BANCO_5, source.PAGO_6, source.MONTO_6, source.BANCO_6, source.PAGO_7, source.MONTO_7, source.BANCO_7, source.PAGO_8, source.MONTO_8, source.BANCO_8);
+	`, stgTable)
+
+	res, err := db.ExecContext(ctx, mergeQuery)
+	if err != nil {
+		return 0, fmt.Errorf("error ejecutando MERGE en %s: %v", codigo, err)
+	}
+	ra, _ := res.RowsAffected()
+	return ra, nil
+}
+
+
 
