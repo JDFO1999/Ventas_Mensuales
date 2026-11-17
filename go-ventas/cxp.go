@@ -305,7 +305,7 @@ func CrearTablaPDOC(db *sql.DB) error {
 			TIPOTRAN    VARCHAR(2) NULL,
 			FTP         VARCHAR(2) NULL,
 			FTIPOD      VARCHAR(2) NULL,
-			FNRODOC     VARCHAR(25) NOT NULL,
+			FNRODOC     VARCHAR(25) NULL,
 			FNROCON     VARCHAR(14) NULL,
 			FNRODOCLAR  VARCHAR(25) NULL,
 			FNROAFE     VARCHAR(25) NULL,
@@ -362,10 +362,37 @@ func CrearTablaPDOC(db *sql.DB) error {
 			FECHAR2     DATE NULL,
 			FMONTO2     DECIMAL(18,2) NULL,
 			FMONTO_DL2  DECIMAL(18,2) NULL,
-			FechaCarga  DATETIME DEFAULT GETDATE(),
-			CONSTRAINT PK_PDOC PRIMARY KEY (FNRODOC)
+			FechaCarga  DATETIME DEFAULT GETDATE()
 		)`)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Eliminar PK o restricciones UNIQUE si existen previamente en la tabla
+	db.Exec(`
+		IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_PDOC' AND parent_object_id = OBJECT_ID('PDOC_Datos'))
+		BEGIN
+			ALTER TABLE PDOC_Datos DROP CONSTRAINT PK_PDOC
+		END
+	`)
+	db.Exec(`
+		DECLARE @pkName sysname;
+		SELECT @pkName = name FROM sys.key_constraints WHERE type = 'PK' AND parent_object_id = OBJECT_ID('PDOC_Datos');
+		IF @pkName IS NOT NULL
+		BEGIN
+			EXEC('ALTER TABLE PDOC_Datos DROP CONSTRAINT ' + @pkName);
+		END
+	`)
+
+	// Indice no agrupado y NO UNIQUE para acelerar la busqueda de duplicados
+	db.Exec(`
+		IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PDOC_Datos') AND name = 'IX_PDOC_Dedupe')
+		BEGIN
+			CREATE NONCLUSTERED INDEX IX_PDOC_Dedupe ON PDOC_Datos (FCODCLI, FNRODOC, TIPOTRAN, FFECHAD)
+		END
+	`)
+
+	return nil
 }
 
 func CrearTablaPTRA(db *sql.DB) error {
@@ -533,6 +560,21 @@ func CrearTablaMPRO(db *sql.DB) error {
 
 // ---------- Lectura DBF ----------
 
+// clavePDOC genera una huella unica para identificar un documento en PDOC sin requerir PK ni UNIQUE en SQL
+func clavePDOC(fcodcli, tipotran, ftipod, fnrodoc, fnrocon string, fecha sql.NullTime, monto float64) string {
+	fStr := ""
+	if fecha.Valid {
+		fStr = fecha.Time.Format("2006-01-02")
+	}
+	return strings.TrimSpace(fcodcli) + "|" +
+		strings.TrimSpace(tipotran) + "|" +
+		strings.TrimSpace(ftipod) + "|" +
+		strings.TrimSpace(fnrodoc) + "|" +
+		strings.TrimSpace(fnrocon) + "|" +
+		fStr + "|" +
+		fmt.Sprintf("%.2f", monto)
+}
+
 func LeerPDOC(path string) ([]PDOCRegistro, error) {
 	dbf, err := OpenDBF(path)
 	if err != nil {
@@ -598,27 +640,36 @@ func LeerPDOC(path string) ([]PDOCRegistro, error) {
 			continue
 		}
 
+		fcodcli := getS(rec, "FCODCLI")
 		fnrodoc := getS(rec, "FNRODOC")
-		if fnrodoc == "" {
+		tipotran := getS(rec, "TIPOTRAN")
+		ftipod := getS(rec, "FTIPOD")
+		fnrocon := getS(rec, "FNROCON")
+		monto := getF(rec, "FMONTO")
+		fechad := sqlDate(getD(rec, "FFECHAD"))
+
+		if fnrodoc == "" && fcodcli == "" {
 			continue
 		}
-		if seen[fnrodoc] {
+
+		key := clavePDOC(fcodcli, tipotran, ftipod, fnrodoc, fnrocon, fechad, monto)
+		if seen[key] {
 			continue
 		}
-		seen[fnrodoc] = true
+		seen[key] = true
 
 		regs = append(regs, PDOCRegistro{
-			FCODCLI:    getS(rec, "FCODCLI"),
+			FCODCLI:    fcodcli,
 			FCODCLIT:   getS(rec, "FCODCLIT"),
-			TIPOTRAN:   getS(rec, "TIPOTRAN"),
+			TIPOTRAN:   tipotran,
 			FTP:        getS(rec, "FTP"),
-			FTIPOD:     getS(rec, "FTIPOD"),
-			FNRODOC:    getS(rec, "FNRODOC"),
-			FNROCON:    getS(rec, "FNROCON"),
+			FTIPOD:     ftipod,
+			FNRODOC:    fnrodoc,
+			FNROCON:    fnrocon,
 			FNRODOCLAR: getS(rec, "FNRODOCLAR"),
 			FNROAFE:    getS(rec, "FNROAFE"),
 			DIASVEN:    getF(rec, "DIASVEN"),
-			FFECHAD:    sqlDate(getD(rec, "FFECHAD")),
+			FFECHAD:    fechad,
 			FFECHAV:    sqlDate(getD(rec, "FFECHAV")),
 			FECHAEXT:   sqlDate(getD(rec, "FECHAEXT")),
 			FECHAR:     sqlDate(getD(rec, "FECHAR")),
@@ -1168,16 +1219,32 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 			} else {
 				defer dbPDOC.Close()
 				if err := CrearTablaPDOC(dbPDOC); err != nil {
-					fmt.Printf("  ERROR creando tabla PDOC: %v\n", errC)
+					fmt.Printf("  ERROR creando tabla PDOC: %v\n", err)
 					logError("CxP: ERROR creando tabla PDOC: %v", err)
 				} else {
 					dedupePDOC := make(map[string]bool)
-					rows, _ := dbPDOC.Query("SELECT FNRODOC FROM PDOC_Datos")
-					if rows != nil {
+					rows, errQ := dbPDOC.Query(`
+						SELECT 
+							ISNULL(FCODCLI,''), 
+							ISNULL(TIPOTRAN,''), 
+							ISNULL(FTIPOD,''), 
+							ISNULL(FNRODOC,''), 
+							ISNULL(FNROCON,''), 
+							FFECHAD, 
+							ISNULL(FMONTO, 0) 
+						FROM PDOC_Datos
+					`)
+					if errQ != nil {
+						fmt.Printf("  ERROR consultando existentes PDOC: %v\n", errQ)
+						logError("CxP: ERROR consultando existentes PDOC: %v", errQ)
+					} else {
 						for rows.Next() {
-							var n string
-							if rows.Scan(&n) == nil {
-								dedupePDOC[strings.TrimSpace(n)] = true
+							var codcli, ttran, tdoc, nrodoc, nrocon string
+							var fechad sql.NullTime
+							var monto float64
+							if errS := rows.Scan(&codcli, &ttran, &tdoc, &nrodoc, &nrocon, &fechad, &monto); errS == nil {
+								k := clavePDOC(codcli, ttran, tdoc, nrodoc, nrocon, fechad, monto)
+								dedupePDOC[k] = true
 							}
 						}
 						rows.Close()
@@ -1186,8 +1253,10 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 
 					var nuevos []PDOCRegistro
 					for _, r := range pdocRegs {
-						if !dedupePDOC[strings.TrimSpace(r.FNRODOC)] {
+						k := clavePDOC(r.FCODCLI, r.TIPOTRAN, r.FTIPOD, r.FNRODOC, r.FNROCON, r.FFECHAD, r.FMONTO)
+						if !dedupePDOC[k] {
 							nuevos = append(nuevos, r)
+							dedupePDOC[k] = true
 						}
 					}
 					fmt.Printf("  PDOC: %d nuevos a insertar\n", len(nuevos))
