@@ -395,6 +395,31 @@ func CrearTablaPDOC(db *sql.DB) error {
 	return nil
 }
 
+// LimpiarDuplicadosPDOC elimina registros duplicados por (FCODCLI, FTIPOD, FNRODOC),
+// preservando siempre la version que tiene CCIA asignado (001, 201, 304) y la fecha mas reciente.
+func LimpiarDuplicadosPDOC(db *sql.DB) (int64, error) {
+	query := `
+		WITH Ranked AS (
+			SELECT 
+				FCODCLI, FTIPOD, FNRODOC, CCIA, FFECHAD,
+				ROW_NUMBER() OVER (
+					PARTITION BY FCODCLI, FTIPOD, FNRODOC
+					ORDER BY 
+						CASE WHEN CCIA IS NOT NULL AND CCIA <> '' THEN 1 ELSE 2 END,
+						FFECHAD DESC
+				) as rn
+			FROM PDOC_Datos
+		)
+		DELETE FROM Ranked WHERE rn > 1;
+	`
+	res, err := db.Exec(query)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
 func CrearTablaPTRA(db *sql.DB) error {
 	_, err := db.Exec(`
 		IF OBJECT_ID('PTRA_Datos','U') IS NULL
@@ -1224,6 +1249,15 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 					fmt.Printf("  ERROR creando tabla PDOC: %v\n", err)
 					logError("CxP: ERROR creando tabla PDOC: %v", err)
 				} else {
+					// Limpieza preventiva automatica de duplicados (conserva CCIA activo y fecha mas reciente)
+					if borrados, errLimp := LimpiarDuplicadosPDOC(dbPDOC); errLimp != nil {
+						fmt.Printf("  ADVERTENCIA limpiando duplicados PDOC: %v\n", errLimp)
+						logError("CxP: ADVERTENCIA limpiando duplicados PDOC: %v", errLimp)
+					} else if borrados > 0 {
+						fmt.Printf("  PDOC: %d duplicados limpiados en SQL\n", borrados)
+						logInfo("CxP: PDOC %d duplicados limpiados en SQL", borrados)
+					}
+
 					dedupePDOC := make(map[string]bool)
 					rows, errQ := dbPDOC.Query(`
 						SELECT 
