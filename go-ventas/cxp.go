@@ -7,7 +7,23 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	mssql "github.com/denisenkom/go-mssqldb"
 )
+
+func dateValMSSQL(nt sql.NullTime) interface{} {
+	if !nt.Valid || nt.Time.IsZero() || nt.Time.Year() < 1753 || nt.Time.Year() > 9999 {
+		return nil
+	}
+	return nt.Time
+}
+
+func truncStr(s string, max int) string {
+	if len(s) > max {
+		return s[:max]
+	}
+	return s
+}
 
 func sqlDate(d time.Time) sql.NullTime {
 	if d.IsZero() || d.Year() < 1753 || d.Year() > 9999 {
@@ -428,14 +444,14 @@ func CrearTablaPTRA(db *sql.DB) error {
 			TTIPOD      VARCHAR(2) NULL,
 			TTP         VARCHAR(2) NULL,
 			TIPOTRAN    VARCHAR(2) NULL,
-			TNROMOV     VARCHAR(10) NOT NULL,
-			TNRODOC     VARCHAR(25) NOT NULL,
+			TNROMOV     VARCHAR(10) NULL,
+			TNRODOC     VARCHAR(25) NULL,
 			NRO_NC      VARCHAR(25) NULL,
 			TMONTOPG    DECIMAL(18,2) NULL,
 			TMONTOPGDL  DECIMAL(18,2) NULL,
 			TNC75PG     DECIMAL(18,2) NULL,
 			TFECHAP     DATE NULL,
-			TDESCRIP    VARCHAR(100) NULL,
+			TDESCRIP    VARCHAR(MAX) NULL,
 			RECIBO      VARCHAR(8) NULL,
 			DEPOSITO    VARCHAR(12) NULL,
 			TBANCO      VARCHAR(2) NULL,
@@ -450,12 +466,17 @@ func CrearTablaPTRA(db *sql.DB) error {
 			NDNC        VARCHAR(2) NULL,
 			NRODED      VARCHAR(25) NULL,
 			DES_LARG    VARCHAR(MAX) NULL,
-			FechaCarga  DATETIME DEFAULT GETDATE(),
-			CONSTRAINT PK_PTRA PRIMARY KEY (TNRODOC, TNROMOV)
+			FechaCarga  DATETIME DEFAULT GETDATE()
 		)`)
 	if err != nil {
 		return err
 	}
+	db.Exec(`
+		IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'PK_PTRA' AND parent_object_id = OBJECT_ID('PTRA_Datos'))
+		BEGIN
+			ALTER TABLE PTRA_Datos DROP CONSTRAINT PK_PTRA
+		END
+	`)
 	_, err = db.Exec(`
 		IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('PTRA_Datos') AND name = 'IX_PTRA_TCODCLI')
 		CREATE NONCLUSTERED INDEX IX_PTRA_TCODCLI ON PTRA_Datos(TCODCLI)`)
@@ -845,63 +866,54 @@ func InsertarPDOC(db *sql.DB, regs []PDOCRegistro) (int, error) {
 	if len(regs) == 0 {
 		return 0, nil
 	}
-	const batchSize = 33
+	cols := []string{
+		"FCODCLI", "FCODCLIT", "TIPOTRAN", "FTP", "FTIPOD", "FNRODOC", "FNROCON", "FNRODOCLAR", "FNROAFE", "DIASVEN",
+		"FFECHAD", "FFECHAV", "FECHAEXT", "FECHAR", "FMONTO", "NIGTF", "FMONTO_DL", "FDESCRIPD", "FMONTOPG", "FAPUNT",
+		"FFLAG", "CUEFEC", "NROPED", "FRECIBO", "FDEPOSITO", "FCODBAN", "DESCUENTO", "MONTOIVA", "EXENTA", "DEDUC",
+		"MON_RET", "POR_RET", "NRORET", "MONTOOBJ", "BS_DOLLAR", "FECHAGRA", "TIPOGAS", "OPERADOR", "PORIVA", "NUMRELA",
+		"PORMUNI", "MTOMUNI", "SERIAL_F", "CLIBROCOM", "CODACTECO", "NSUJETO", "CLIBROGAS", "RUTAIMAGEN", "CCODIGOALC", "LAUDITADO",
+		"OPERADORA", "FECHAAUDIT", "CCIA", "DES_LARG", "FCODCLI2", "TIPOTRAN2", "FNRODOC2", "FNROCON2", "FFECHAD2", "FECHAR2",
+		"FMONTO2", "FMONTO_DL2",
+	}
+
+	copyStmt := mssql.CopyIn("PDOC_Datos", mssql.BulkOptions{
+		Tablock:          true,
+		RowsPerBatch:     5000,
+		CheckConstraints: false,
+	}, cols...)
+	bulkStmt, err := db.Prepare(copyStmt)
+	if err != nil {
+		return 0, fmt.Errorf("error prepare bulk PDOC: %w", err)
+	}
+	defer bulkStmt.Close()
+
 	total := 0
 	lastPrint := 0
-	cols := "FCODCLI,FCODCLIT,TIPOTRAN,FTP,FTIPOD,FNRODOC,FNROCON,FNRODOCLAR,FNROAFE,DIASVEN,FFECHAD,FFECHAV,FECHAEXT,FECHAR,FMONTO,NIGTF,FMONTO_DL,FDESCRIPD,FMONTOPG,FAPUNT,FFLAG,CUEFEC,NROPED,FRECIBO,FDEPOSITO,FCODBAN,DESCUENTO,MONTOIVA,EXENTA,DEDUC,MON_RET,POR_RET,NRORET,MONTOOBJ,BS_DOLLAR,FECHAGRA,TIPOGAS,OPERADOR,PORIVA,NUMRELA,PORMUNI,MTOMUNI,SERIAL_F,CLIBROCOM,CODACTECO,NSUJETO,CLIBROGAS,RUTAIMAGEN,CCODIGOALC,LAUDITADO,OPERADORA,FECHAAUDIT,CCIA,DES_LARG,FCODCLI2,TIPOTRAN2,FNRODOC2,FNROCON2,FFECHAD2,FECHAR2,FMONTO2,FMONTO_DL2"
-	singlePH := "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-
-	for i := 0; i < len(regs); i += batchSize {
-		end := i + batchSize
-		if end > len(regs) {
-			end = len(regs)
+	for _, r := range regs {
+		args := []interface{}{
+			truncStr(r.FCODCLI, 10), truncStr(r.FCODCLIT, 10), truncStr(r.TIPOTRAN, 2), truncStr(r.FTP, 2), truncStr(r.FTIPOD, 2),
+			truncStr(r.FNRODOC, 25), truncStr(r.FNROCON, 14), truncStr(r.FNRODOCLAR, 25), truncStr(r.FNROAFE, 25), r.DIASVEN,
+			dateValMSSQL(r.FFECHAD), dateValMSSQL(r.FFECHAV), dateValMSSQL(r.FECHAEXT), dateValMSSQL(r.FECHAR), r.FMONTO, r.NIGTF, r.FMONTO_DL, r.FDESCRIPD, r.FMONTOPG, r.FAPUNT,
+			truncStr(r.FFLAG, 1), truncStr(r.CUEFEC, 1), truncStr(r.NROPED, 8), truncStr(r.FRECIBO, 8), truncStr(r.FDEPOSITO, 12), truncStr(r.FCODBAN, 2), r.DESCUENTO, r.MONTOIVA, r.EXENTA, r.DEDUC,
+			r.MON_RET, r.POR_RET, truncStr(r.NRORET, 10), r.MONTOOBJ, r.BS_DOLLAR, dateValMSSQL(r.FECHAGRA), truncStr(r.TIPOGAS, 6), truncStr(r.OPERADOR, 20), r.PORIVA, truncStr(r.NUMRELA, 10),
+			r.PORMUNI, r.MTOMUNI, truncStr(r.SERIAL_F, 20), truncStr(r.CLIBROCOM, 1), truncStr(r.CODACTECO, 20), r.NSUJETO, truncStr(r.CLIBROGAS, 1), truncStr(r.RUTAIMAGEN, 200), truncStr(r.CCODIGOALC, 4), r.LAUDITADO,
+			truncStr(r.OPERADORA, 20), dateValMSSQL(r.FECHAAUDIT), truncStr(r.CCIA, 3), r.DES_LARG, truncStr(r.FCODCLI2, 10), truncStr(r.TIPOTRAN2, 2), truncStr(r.FNRODOC2, 25), truncStr(r.FNROCON2, 14), dateValMSSQL(r.FFECHAD2), dateValMSSQL(r.FECHAR2),
+			r.FMONTO2, r.FMONTO_DL2,
 		}
-		chunk := regs[i:end]
-
-		placeholders := make([]string, len(chunk))
-		args := make([]interface{}, 0, len(chunk)*62)
-		for j, r := range chunk {
-			placeholders[j] = singlePH
-			args = append(args,
-				r.FCODCLI, r.FCODCLIT, r.TIPOTRAN, r.FTP, r.FTIPOD, r.FNRODOC, r.FNROCON, r.FNRODOCLAR, r.FNROAFE, r.DIASVEN,
-				r.FFECHAD, r.FFECHAV, r.FECHAEXT, r.FECHAR, r.FMONTO, r.NIGTF, r.FMONTO_DL, r.FDESCRIPD, r.FMONTOPG, r.FAPUNT,
-				r.FFLAG, r.CUEFEC, r.NROPED, r.FRECIBO, r.FDEPOSITO, r.FCODBAN, r.DESCUENTO, r.MONTOIVA, r.EXENTA, r.DEDUC,
-				r.MON_RET, r.POR_RET, r.NRORET, r.MONTOOBJ, r.BS_DOLLAR, r.FECHAGRA, r.TIPOGAS, r.OPERADOR, r.PORIVA, r.NUMRELA,
-				r.PORMUNI, r.MTOMUNI, r.SERIAL_F, r.CLIBROCOM, r.CODACTECO, r.NSUJETO, r.CLIBROGAS, r.RUTAIMAGEN, r.CCODIGOALC, r.LAUDITADO,
-				r.OPERADORA, r.FECHAAUDIT, r.CCIA, r.DES_LARG, r.FCODCLI2, r.TIPOTRAN2, r.FNRODOC2, r.FNROCON2, r.FFECHAD2, r.FECHAR2,
-				r.FMONTO2, r.FMONTO_DL2,
-			)
+		if _, err := bulkStmt.Exec(args...); err != nil {
+			return total, fmt.Errorf("error fila %d bulk PDOC: %w", total, err)
 		}
-
-		query := fmt.Sprintf("INSERT INTO PDOC_Datos (%s) VALUES %s", cols, strings.Join(placeholders, ","))
-		_, err := db.Exec(query, args...)
-		if err != nil {
-			for _, r := range chunk {
-				singleArgs := []interface{}{
-					r.FCODCLI, r.FCODCLIT, r.TIPOTRAN, r.FTP, r.FTIPOD, r.FNRODOC, r.FNROCON, r.FNRODOCLAR, r.FNROAFE, r.DIASVEN,
-					r.FFECHAD, r.FFECHAV, r.FECHAEXT, r.FECHAR, r.FMONTO, r.NIGTF, r.FMONTO_DL, r.FDESCRIPD, r.FMONTOPG, r.FAPUNT,
-					r.FFLAG, r.CUEFEC, r.NROPED, r.FRECIBO, r.FDEPOSITO, r.FCODBAN, r.DESCUENTO, r.MONTOIVA, r.EXENTA, r.DEDUC,
-					r.MON_RET, r.POR_RET, r.NRORET, r.MONTOOBJ, r.BS_DOLLAR, r.FECHAGRA, r.TIPOGAS, r.OPERADOR, r.PORIVA, r.NUMRELA,
-					r.PORMUNI, r.MTOMUNI, r.SERIAL_F, r.CLIBROCOM, r.CODACTECO, r.NSUJETO, r.CLIBROGAS, r.RUTAIMAGEN, r.CCODIGOALC, r.LAUDITADO,
-					r.OPERADORA, r.FECHAAUDIT, r.CCIA, r.DES_LARG, r.FCODCLI2, r.TIPOTRAN2, r.FNRODOC2, r.FNROCON2, r.FFECHAD2, r.FECHAR2,
-					r.FMONTO2, r.FMONTO_DL2,
-				}
-				singleQuery := fmt.Sprintf("INSERT INTO PDOC_Datos (%s) VALUES %s", cols, singlePH)
-				if _, errSingle := db.Exec(singleQuery, singleArgs...); errSingle == nil {
-					total++
-				}
-			}
-		} else {
-			total += len(chunk)
-		}
-		if total-lastPrint >= 1500 || total == len(regs) {
+		total++
+		if total-lastPrint >= 10000 || total == len(regs) {
 			pct := total * 100 / len(regs)
 			fmt.Printf("\r  PDOC: %d/%d insertados (%d%%)...    ", total, len(regs), pct)
 			lastPrint = total
 		}
 	}
+	if _, err := bulkStmt.Exec(); err != nil {
+		return total, fmt.Errorf("error flush bulk PDOC: %w", err)
+	}
 	fmt.Printf("\r  PDOC: %d/%d insertados (100%%)       \n", total, len(regs))
-	return total, nil
 	return total, nil
 }
 
@@ -909,54 +921,45 @@ func InsertarPTRA(db *sql.DB, regs []PTRARegistro) (int, error) {
 	if len(regs) == 0 {
 		return 0, nil
 	}
-	const batchSize = 50
+	cols := []string{
+		"TCODCLI", "TTIPOD", "TTP", "TIPOTRAN", "TNROMOV", "TNRODOC", "NRO_NC",
+		"TMONTOPG", "TMONTOPGDL", "TNC75PG", "TFECHAP", "TDESCRIP", "RECIBO", "DEPOSITO",
+		"TBANCO", "TCOBRADOR", "BS_DOLLAR", "PORCEN", "MTOOBJIM", "NOMBRE", "FECHAGRA",
+		"OPERADOR", "NUMRELA", "NDNC", "NRODED", "DES_LARG",
+	}
+
+	copyStmt := mssql.CopyIn("PTRA_Datos", mssql.BulkOptions{
+		Tablock:          true,
+		RowsPerBatch:     5000,
+		CheckConstraints: false,
+	}, cols...)
+	bulkStmt, err := db.Prepare(copyStmt)
+	if err != nil {
+		return 0, fmt.Errorf("error prepare bulk PTRA: %w", err)
+	}
+	defer bulkStmt.Close()
+
 	total := 0
 	lastPrint := 0
-	cols := "TCODCLI,TTIPOD,TTP,TIPOTRAN,TNROMOV,TNRODOC,NRO_NC,TMONTOPG,TMONTOPGDL,TNC75PG,TFECHAP,TDESCRIP,RECIBO,DEPOSITO,TBANCO,TCOBRADOR,BS_DOLLAR,PORCEN,MTOOBJIM,NOMBRE,FECHAGRA,OPERADOR,NUMRELA,NDNC,NRODED,DES_LARG"
-	singlePH := "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-
-	for i := 0; i < len(regs); i += batchSize {
-		end := i + batchSize
-		if end > len(regs) {
-			end = len(regs)
+	for _, r := range regs {
+		args := []interface{}{
+			truncStr(r.TCODCLI, 10), truncStr(r.TTIPOD, 2), truncStr(r.TTP, 2), truncStr(r.TIPOTRAN, 2), truncStr(r.TNROMOV, 10), truncStr(r.TNRODOC, 25), truncStr(r.NRO_NC, 25),
+			r.TMONTOPG, r.TMONTOPGDL, r.TNC75PG, dateValMSSQL(r.TFECHAP), r.TDESCRIP, truncStr(r.RECIBO, 8), truncStr(r.DEPOSITO, 12),
+			truncStr(r.TBANCO, 2), truncStr(r.TCOBRADOR, 2), r.BS_DOLLAR, r.PORCEN, r.MTOOBJIM, truncStr(r.NOMBRE, 120), dateValMSSQL(r.FECHAGRA),
+			truncStr(r.OPERADOR, 20), truncStr(r.NUMRELA, 10), truncStr(r.NDNC, 2), truncStr(r.NRODED, 25), r.DES_LARG,
 		}
-		chunk := regs[i:end]
-
-		placeholders := make([]string, len(chunk))
-		args := make([]interface{}, 0, len(chunk)*26)
-		for j, r := range chunk {
-			placeholders[j] = singlePH
-			args = append(args,
-				r.TCODCLI, r.TTIPOD, r.TTP, r.TIPOTRAN, r.TNROMOV, r.TNRODOC, r.NRO_NC,
-				r.TMONTOPG, r.TMONTOPGDL, r.TNC75PG, r.TFECHAP, r.TDESCRIP, r.RECIBO, r.DEPOSITO,
-				r.TBANCO, r.TCOBRADOR, r.BS_DOLLAR, r.PORCEN, r.MTOOBJIM, r.NOMBRE, r.FECHAGRA,
-				r.OPERADOR, r.NUMRELA, r.NDNC, r.NRODED, r.DES_LARG,
-			)
+		if _, err := bulkStmt.Exec(args...); err != nil {
+			return total, fmt.Errorf("error fila %d bulk PTRA: %w", total, err)
 		}
-
-		query := fmt.Sprintf("INSERT INTO PTRA_Datos (%s) VALUES %s", cols, strings.Join(placeholders, ","))
-		_, err := db.Exec(query, args...)
-		if err != nil {
-			for _, r := range chunk {
-				singleArgs := []interface{}{
-					r.TCODCLI, r.TTIPOD, r.TTP, r.TIPOTRAN, r.TNROMOV, r.TNRODOC, r.NRO_NC,
-					r.TMONTOPG, r.TMONTOPGDL, r.TNC75PG, r.TFECHAP, r.TDESCRIP, r.RECIBO, r.DEPOSITO,
-					r.TBANCO, r.TCOBRADOR, r.BS_DOLLAR, r.PORCEN, r.MTOOBJIM, r.NOMBRE, r.FECHAGRA,
-					r.OPERADOR, r.NUMRELA, r.NDNC, r.NRODED, r.DES_LARG,
-				}
-				singleQuery := fmt.Sprintf("INSERT INTO PTRA_Datos (%s) VALUES %s", cols, singlePH)
-				if _, errSingle := db.Exec(singleQuery, singleArgs...); errSingle == nil {
-					total++
-				}
-			}
-		} else {
-			total += len(chunk)
-		}
-		if total-lastPrint >= 1500 || total == len(regs) {
+		total++
+		if total-lastPrint >= 15000 || total == len(regs) {
 			pct := total * 100 / len(regs)
 			fmt.Printf("\r  PTRA: %d/%d insertados (%d%%)...    ", total, len(regs), pct)
 			lastPrint = total
 		}
+	}
+	if _, err := bulkStmt.Exec(); err != nil {
+		return total, fmt.Errorf("error flush bulk PTRA: %w", err)
 	}
 	fmt.Printf("\r  PTRA: %d/%d insertados (100%%)       \n", total, len(regs))
 	return total, nil
@@ -1444,4 +1447,136 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 
 	fmt.Printf("\n  CxP listo. Tiempo: %.1f min.\n", time.Since(tStart).Minutes())
 	logInfo("CxP: Completado en %.1f min", time.Since(tStart).Minutes())
+}
+
+// RecargarCxPCompleto vacia las tablas de CxP en SQL y las recarga limpias directamente desde los DBF originales
+func RecargarCxPCompleto() error {
+	logInfo("CxP: Iniciando recarga limpia completa desde DBF...")
+	tStart := time.Now()
+
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println("  RECARGA LIMPIA COMPLETA DE CXP (DBF -> SQL)")
+	fmt.Println(strings.Repeat("=", 60))
+
+	// 1. PDOC
+	fmt.Println("\n  === 1. PDOC (Documentos por Pagar) ===")
+	dbPDOC, err := ConectarSQL_PDOC()
+	if err != nil {
+		fmt.Printf("  ERROR conectando PDOC_Tiendas: %v\n", err)
+		return err
+	}
+	defer dbPDOC.Close()
+
+	if err := CrearTablaPDOC(dbPDOC); err != nil {
+		fmt.Printf("  ERROR creando tabla PDOC: %v\n", err)
+		return err
+	}
+
+	pdocPath := rutaPDOC()
+	fmt.Printf("  Leyendo %s...\n", filepath.Base(pdocPath))
+	tL := time.Now()
+	pdocRegs, err := LeerPDOC(pdocPath)
+	if err != nil {
+		fmt.Printf("  ERROR leyendo PDOC: %v\n", err)
+		return err
+	}
+	fmt.Printf("  PDOC: %d registros leidos de DBF en %v\n", len(pdocRegs), time.Since(tL))
+
+	fmt.Println("  Vaciando tabla PDOC_Datos (TRUNCATE)...")
+	if _, err := dbPDOC.Exec("TRUNCATE TABLE PDOC_Datos"); err != nil {
+		dbPDOC.Exec("DELETE FROM PDOC_Datos")
+	}
+
+	fmt.Println("  Insertando registros limpios en PDOC_Datos...")
+	tI := time.Now()
+	insPDOC, err := InsertarPDOC(dbPDOC, pdocRegs)
+	if err != nil {
+		fmt.Printf("  ERROR insertando PDOC: %v\n", err)
+		return err
+	}
+	fmt.Printf("  PDOC: %d registros insertados OK en %v\n", insPDOC, time.Since(tI))
+	logInfo("CxP: PDOC recarga limpia %d registros insertados en %v", insPDOC, time.Since(tI))
+
+	// 2. PTRA
+	fmt.Println("\n  === 2. PTRA (Pagos y Movimientos) ===")
+	dbPTRA, err := ConectarSQL_PTRA()
+	if err != nil {
+		fmt.Printf("  ERROR conectando PTRA_Tiendas: %v\n", err)
+		return err
+	}
+	defer dbPTRA.Close()
+
+	if err := CrearTablaPTRA(dbPTRA); err != nil {
+		fmt.Printf("  ERROR creando tabla PTRA: %v\n", err)
+		return err
+	}
+
+	ptraPath := rutaPTRA()
+	fmt.Printf("  Leyendo %s...\n", filepath.Base(ptraPath))
+	tL = time.Now()
+	ptraRegs, err := LeerPTRA(ptraPath)
+	if err != nil {
+		fmt.Printf("  ERROR leyendo PTRA: %v\n", err)
+		return err
+	}
+	fmt.Printf("  PTRA: %d registros leidos de DBF en %v\n", len(ptraRegs), time.Since(tL))
+
+	fmt.Println("  Vaciando tabla PTRA_Datos (TRUNCATE)...")
+	if _, err := dbPTRA.Exec("TRUNCATE TABLE PTRA_Datos"); err != nil {
+		dbPTRA.Exec("DELETE FROM PTRA_Datos")
+	}
+
+	fmt.Println("  Insertando registros limpios en PTRA_Datos...")
+	tI = time.Now()
+	insPTRA, err := InsertarPTRA(dbPTRA, ptraRegs)
+	if err != nil {
+		fmt.Printf("  ERROR insertando PTRA: %v\n", err)
+		return err
+	}
+	fmt.Printf("  PTRA: %d registros insertados OK en %v\n", insPTRA, time.Since(tI))
+	logInfo("CxP: PTRA recarga limpia %d registros insertados en %v", insPTRA, time.Since(tI))
+
+	// 3. MPRO
+	fmt.Println("\n  === 3. MPRO (Maestro de Proveedores) ===")
+	dbMPRO, err := ConectarSQL_MPRO()
+	if err != nil {
+		fmt.Printf("  ERROR conectando MPRO_Tiendas: %v\n", err)
+		return err
+	}
+	defer dbMPRO.Close()
+
+	if err := CrearTablaMPRO(dbMPRO); err != nil {
+		fmt.Printf("  ERROR creando tabla MPRO: %v\n", err)
+		return err
+	}
+
+	mproPath := rutaMPRO()
+	fmt.Printf("  Leyendo %s...\n", filepath.Base(mproPath))
+	tL = time.Now()
+	mproRegs, err := LeerMPRO(mproPath)
+	if err != nil {
+		fmt.Printf("  ERROR leyendo MPRO: %v\n", err)
+		return err
+	}
+	fmt.Printf("  MPRO: %d registros leidos de DBF en %v\n", len(mproRegs), time.Since(tL))
+
+	fmt.Println("  Vaciando tabla MPRO_Datos (TRUNCATE)...")
+	if _, err := dbMPRO.Exec("TRUNCATE TABLE MPRO_Datos"); err != nil {
+		dbMPRO.Exec("DELETE FROM MPRO_Datos")
+	}
+
+	fmt.Println("  Insertando registros limpios en MPRO_Datos...")
+	tI = time.Now()
+	insMPRO, err := InsertarMPRO(dbMPRO, mproRegs)
+	if err != nil {
+		fmt.Printf("  ERROR insertando MPRO: %v\n", err)
+		return err
+	}
+	fmt.Printf("  MPRO: %d registros insertados OK en %v\n", insMPRO, time.Since(tI))
+	logInfo("CxP: MPRO recarga limpia %d registros insertados en %v", insMPRO, time.Since(tI))
+
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Printf("  RECARGA LIMPIA COMPLETADA CON EXITO en %.1f min\n", time.Since(tStart).Minutes())
+	fmt.Println(strings.Repeat("=", 60))
+	return nil
 }

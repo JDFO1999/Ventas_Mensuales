@@ -107,6 +107,7 @@ func main() {
 	autoSubFamPtr := flag.Bool("auto-subfam", false, "Modo automatico SUBFAM")
 	autoCxPPtr := flag.Bool("auto-cxp", false, "Modo automatico CxP")
 	setupCxPPtr := flag.Bool("setup-cxp", false, "Configura y registra automaticamente la tarea de CxP en Windows")
+	reloadCxPPtr := flag.Bool("reload-cxp", false, "Recarga limpia completa de CxP desde DBF (borra y recarga)")
 	autoOfertasPtr := flag.Bool("auto-ofertas", false, "Modo automatico OFERTAS")
 	setupOfertasPtr := flag.Bool("setup-ofertas", false, "Configura y registra automaticamente la tarea de ofertas en Windows")
 	espejoPtr := flag.Bool("espejo", false, "Cargar espejo DBF a SQL Server")
@@ -461,6 +462,14 @@ func main() {
 		return
 	}
 
+	if *reloadCxPPtr {
+		if err := RecargarCxPCompleto(); err != nil {
+			fmt.Printf("ERROR en recarga limpia CxP: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if *autoOfertasPtr {
 		mode := *modePtr
 		if mode == "" {
@@ -571,6 +580,7 @@ func menuPrincipal() {
 		fmt.Println("  │  [23] Cargar CxP a SQL                    │")
 		fmt.Println("  │  [24] Ejecutar CxP modo automatico        │")
 		fmt.Println("  │  [25] Configurar automatizacion CxP       │")
+		fmt.Println("  │  [31] Recargar CxP completo desde DBF     │")
 		fmt.Println("  └───────────────────────────────────────────┘")
 		fmt.Println()
 		fmt.Println("  ┌──── ESPEJO DBF → SQL SERVER ──────────────┐")
@@ -649,6 +659,8 @@ func menuPrincipal() {
 			MenuConfigOfertas()
 		case 30:
 			menuFA_Fecha()
+		case 31:
+			RecargarCxPCompleto()
 		case 0:
 			fmt.Println("  Hasta luego.")
 			return
