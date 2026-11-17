@@ -830,6 +830,7 @@ func InsertarPDOC(db *sql.DB, regs []PDOCRegistro) (int, error) {
 	}
 	const batchSize = 33
 	total := 0
+	lastPrint := 0
 	cols := "FCODCLI,FCODCLIT,TIPOTRAN,FTP,FTIPOD,FNRODOC,FNROCON,FNRODOCLAR,FNROAFE,DIASVEN,FFECHAD,FFECHAV,FECHAEXT,FECHAR,FMONTO,NIGTF,FMONTO_DL,FDESCRIPD,FMONTOPG,FAPUNT,FFLAG,CUEFEC,NROPED,FRECIBO,FDEPOSITO,FCODBAN,DESCUENTO,MONTOIVA,EXENTA,DEDUC,MON_RET,POR_RET,NRORET,MONTOOBJ,BS_DOLLAR,FECHAGRA,TIPOGAS,OPERADOR,PORIVA,NUMRELA,PORMUNI,MTOMUNI,SERIAL_F,CLIBROCOM,CODACTECO,NSUJETO,CLIBROGAS,RUTAIMAGEN,CCODIGOALC,LAUDITADO,OPERADORA,FECHAAUDIT,CCIA,DES_LARG,FCODCLI2,TIPOTRAN2,FNRODOC2,FNROCON2,FFECHAD2,FECHAR2,FMONTO2,FMONTO_DL2"
 	singlePH := "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
@@ -876,11 +877,14 @@ func InsertarPDOC(db *sql.DB, regs []PDOCRegistro) (int, error) {
 		} else {
 			total += len(chunk)
 		}
-		if total%5000 == 0 {
-			fmt.Printf("\r  PDOC: %d/%d insertados...    ", total, len(regs))
+		if total-lastPrint >= 1500 || total == len(regs) {
+			pct := total * 100 / len(regs)
+			fmt.Printf("\r  PDOC: %d/%d insertados (%d%%)...    ", total, len(regs), pct)
+			lastPrint = total
 		}
 	}
-	fmt.Printf("\n")
+	fmt.Printf("\r  PDOC: %d/%d insertados (100%%)       \n", total, len(regs))
+	return total, nil
 	return total, nil
 }
 
@@ -890,6 +894,7 @@ func InsertarPTRA(db *sql.DB, regs []PTRARegistro) (int, error) {
 	}
 	const batchSize = 50
 	total := 0
+	lastPrint := 0
 	cols := "TCODCLI,TTIPOD,TTP,TIPOTRAN,TNROMOV,TNRODOC,NRO_NC,TMONTOPG,TMONTOPGDL,TNC75PG,TFECHAP,TDESCRIP,RECIBO,DEPOSITO,TBANCO,TCOBRADOR,BS_DOLLAR,PORCEN,MTOOBJIM,NOMBRE,FECHAGRA,OPERADOR,NUMRELA,NDNC,NRODED,DES_LARG"
 	singlePH := "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
@@ -930,11 +935,13 @@ func InsertarPTRA(db *sql.DB, regs []PTRARegistro) (int, error) {
 		} else {
 			total += len(chunk)
 		}
-		if total%5000 == 0 {
-			fmt.Printf("\r  PTRA: %d/%d insertados...    ", total, len(regs))
+		if total-lastPrint >= 1500 || total == len(regs) {
+			pct := total * 100 / len(regs)
+			fmt.Printf("\r  PTRA: %d/%d insertados (%d%%)...    ", total, len(regs), pct)
+			lastPrint = total
 		}
 	}
-	fmt.Printf("\n")
+	fmt.Printf("\r  PTRA: %d/%d insertados (100%%)       \n", total, len(regs))
 	return total, nil
 }
 
@@ -1128,6 +1135,7 @@ func InsertarMPRO(db *sql.DB, regs []MPRORegistro) (int, error) {
 	}
 	const batchSize = 18
 	total := 0
+	lastPrint := 0
 	cols := "CODCLI,ZONA,NOMCLI,CEDCLI,NITCLI,DIRCLI1,DIRCLI2,DIRTRAB1,DIRTRAB2,CIUDAD1,CIUDAD2,TELEFONO,TELFTRAB,ATENCION,REFERIDO,CEDFIAD,RIM,NOMFIAD,DIRFIAD1,DIRFIAD2,DIRFIAD3,DIRFIAD4,CIUDADF1,CIUDADF2,TELFFIAD1,TELFFIAD2,SALCLI,PLAZO,LCREDCLI,CODCUEN,CODEFEC,CODCAJ,SERIE,NATJU,DOLLAR,INIACT,REPLEG,FECREG,ACTCOM,LOGMON,ESTADO1,PAIS,CLOCK,IM,SIN_RET,TBANCARIA,PORCENT,CODCXC,CODND,CONTACTO,TELEFONOC,OBSERVA,TPLAZO,POR_IMP,POR_DST1,POR_DST2,POR_DST3,POR_DSTPP,COD_BAN1,COD_BAN2,COD_BAN3,COD_BAN4,COD_BAN5,COD_BAN6,CTABAN1,CTABAN2,CTABAN3,CTABAN4,CTABAN5,CTABAN6,DEPNOMBRE1,DEPNOMBRE2,DEPNOMBRE3,DEPNOMBRE4,DEPNOMBRE5,DEPNOMBRE6,PAG_WEB,EMAILP,EMAILC,EMAILR,REPRE,TELEFONOR,POR_DSTP2,POR_DSTP3,LDEPOSITAR,DETAFIJO,NSUJETO,ZONAP,CODACTECO,DOLLARP,ID_PROVEE,CTIPOTASA,AREAAD,TELEFONOAD,CONTACTOAD,EMAILAD,COD_BANT1,NOMCLIT1,CEDCLIT1,CCUENTAT1,COD_BANT2,NOMCLIT2,CEDCLIT2,CCUENTAT2,TIPO_CTA1,TIPO_CTA2,TIPO_CTA3,TIPO_CTA4,TIPO_CTA1T,TIPO_CTA2T,LREFCAMBI"
 	singlePH := "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
@@ -1184,11 +1192,13 @@ func InsertarMPRO(db *sql.DB, regs []MPRORegistro) (int, error) {
 		} else {
 			total += len(chunk)
 		}
-		if total%500 == 0 {
-			fmt.Printf("\r  MPRO: %d/%d insertados...    ", total, len(regs))
+		if total-lastPrint >= 500 || total == len(regs) {
+			pct := total * 100 / len(regs)
+			fmt.Printf("\r  MPRO: %d/%d insertados (%d%%)...    ", total, len(regs), pct)
+			lastPrint = total
 		}
 	}
-	fmt.Printf("\n")
+	fmt.Printf("\r  MPRO: %d/%d insertados (100%%)       \n", total, len(regs))
 	return total, nil
 }
 
