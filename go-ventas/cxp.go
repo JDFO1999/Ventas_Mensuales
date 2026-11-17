@@ -560,19 +560,12 @@ func CrearTablaMPRO(db *sql.DB) error {
 
 // ---------- Lectura DBF ----------
 
-// clavePDOC genera una huella unica para identificar un documento en PDOC sin requerir PK ni UNIQUE en SQL
-func clavePDOC(fcodcli, tipotran, ftipod, fnrodoc, fnrocon string, fecha sql.NullTime, monto float64) string {
-	fStr := ""
-	if fecha.Valid {
-		fStr = fecha.Time.Format("2006-01-02")
-	}
+// clavePDOC genera una huella unica para identificar un documento en PDOC sin requerir PK ni UNIQUE en SQL.
+// Un documento en CxP queda univocamente determinado por el Proveedor (FCODCLI), Tipo de Documento (FTIPOD) y Nro de Documento (FNRODOC).
+func clavePDOC(fcodcli, ftipod, fnrodoc string) string {
 	return strings.TrimSpace(fcodcli) + "|" +
-		strings.TrimSpace(tipotran) + "|" +
 		strings.TrimSpace(ftipod) + "|" +
-		strings.TrimSpace(fnrodoc) + "|" +
-		strings.TrimSpace(fnrocon) + "|" +
-		fStr + "|" +
-		fmt.Sprintf("%.2f", monto)
+		strings.TrimSpace(fnrodoc)
 }
 
 func LeerPDOC(path string) ([]PDOCRegistro, error) {
@@ -645,14 +638,13 @@ func LeerPDOC(path string) ([]PDOCRegistro, error) {
 		tipotran := getS(rec, "TIPOTRAN")
 		ftipod := getS(rec, "FTIPOD")
 		fnrocon := getS(rec, "FNROCON")
-		monto := getF(rec, "FMONTO")
 		fechad := sqlDate(getD(rec, "FFECHAD"))
 
 		if fnrodoc == "" && fcodcli == "" {
 			continue
 		}
 
-		key := clavePDOC(fcodcli, tipotran, ftipod, fnrodoc, fnrocon, fechad, monto)
+		key := clavePDOC(fcodcli, ftipod, fnrodoc)
 		if seen[key] {
 			continue
 		}
@@ -1236,12 +1228,8 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 					rows, errQ := dbPDOC.Query(`
 						SELECT 
 							ISNULL(FCODCLI,''), 
-							ISNULL(TIPOTRAN,''), 
 							ISNULL(FTIPOD,''), 
-							ISNULL(FNRODOC,''), 
-							ISNULL(FNROCON,''), 
-							FFECHAD, 
-							ISNULL(FMONTO, 0) 
+							ISNULL(FNRODOC,'') 
 						FROM PDOC_Datos
 					`)
 					if errQ != nil {
@@ -1249,11 +1237,9 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 						logError("CxP: ERROR consultando existentes PDOC: %v", errQ)
 					} else {
 						for rows.Next() {
-							var codcli, ttran, tdoc, nrodoc, nrocon string
-							var fechad sql.NullTime
-							var monto float64
-							if errS := rows.Scan(&codcli, &ttran, &tdoc, &nrodoc, &nrocon, &fechad, &monto); errS == nil {
-								k := clavePDOC(codcli, ttran, tdoc, nrodoc, nrocon, fechad, monto)
+							var codcli, tdoc, nrodoc string
+							if errS := rows.Scan(&codcli, &tdoc, &nrodoc); errS == nil {
+								k := clavePDOC(codcli, tdoc, nrodoc)
 								dedupePDOC[k] = true
 							}
 						}
@@ -1263,7 +1249,7 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 
 					var nuevos []PDOCRegistro
 					for _, r := range pdocRegs {
-						k := clavePDOC(r.FCODCLI, r.TIPOTRAN, r.FTIPOD, r.FNRODOC, r.FNROCON, r.FFECHAD, r.FMONTO)
+						k := clavePDOC(r.FCODCLI, r.FTIPOD, r.FNRODOC)
 						if !dedupePDOC[k] {
 							nuevos = append(nuevos, r)
 							dedupePDOC[k] = true
@@ -1316,12 +1302,12 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 					logError("CxP: ERROR creando tabla PTRA: %v", err)
 				} else {
 					dedupePTRA := make(map[string]bool)
-					rows, _ := dbPTRA.Query("SELECT TNRODOC, TNROMOV FROM PTRA_Datos")
+					rows, _ := dbPTRA.Query("SELECT ISNULL(TCODCLI,''), ISNULL(TNRODOC,''), ISNULL(TNROMOV,'') FROM PTRA_Datos")
 					if rows != nil {
 						for rows.Next() {
-							var n, m string
-							if rows.Scan(&n, &m) == nil {
-								dedupePTRA[strings.TrimSpace(n)+"|"+strings.TrimSpace(m)] = true
+							var c, n, m string
+							if rows.Scan(&c, &n, &m) == nil {
+								dedupePTRA[strings.TrimSpace(c)+"|"+strings.TrimSpace(n)+"|"+strings.TrimSpace(m)] = true
 							}
 						}
 						rows.Close()
@@ -1330,7 +1316,7 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 
 					var nuevos []PTRARegistro
 					for _, r := range ptraRegs {
-						key := strings.TrimSpace(r.TNRODOC) + "|" + strings.TrimSpace(r.TNROMOV)
+						key := strings.TrimSpace(r.TCODCLI) + "|" + strings.TrimSpace(r.TNRODOC) + "|" + strings.TrimSpace(r.TNROMOV)
 						if !dedupePTRA[key] {
 							nuevos = append(nuevos, r)
 						}
