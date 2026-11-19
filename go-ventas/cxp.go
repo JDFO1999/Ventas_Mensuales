@@ -1252,62 +1252,22 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 					fmt.Printf("  ERROR creando tabla PDOC: %v\n", err)
 					logError("CxP: ERROR creando tabla PDOC: %v", err)
 				} else {
-					// Limpieza preventiva automatica de duplicados (conserva CCIA activo y fecha mas reciente)
-					if borrados, errLimp := LimpiarDuplicadosPDOC(dbPDOC); errLimp != nil {
-						fmt.Printf("  ADVERTENCIA limpiando duplicados PDOC: %v\n", errLimp)
-						logError("CxP: ADVERTENCIA limpiando duplicados PDOC: %v", errLimp)
-					} else if borrados > 0 {
-						fmt.Printf("  PDOC: %d duplicados limpiados en SQL\n", borrados)
-						logInfo("CxP: PDOC %d duplicados limpiados en SQL", borrados)
+					fmt.Println("  Vaciando tabla PDOC_Datos (TRUNCATE)...")
+					if _, err := dbPDOC.Exec("TRUNCATE TABLE PDOC_Datos"); err != nil {
+						dbPDOC.Exec("DELETE FROM PDOC_Datos")
 					}
 
-					dedupePDOC := make(map[string]bool)
-					rows, errQ := dbPDOC.Query(`
-						SELECT 
-							ISNULL(FCODCLI,''), 
-							ISNULL(FTIPOD,''), 
-							ISNULL(FNRODOC,'') 
-						FROM PDOC_Datos
-					`)
-					if errQ != nil {
-						fmt.Printf("  ERROR consultando existentes PDOC: %v\n", errQ)
-						logError("CxP: ERROR consultando existentes PDOC: %v", errQ)
+					ins, err := InsertarPDOC(dbPDOC, pdocRegs)
+					if err != nil {
+						fmt.Printf("  ERROR insertando PDOC: %v\n", err)
+						logError("CxP: ERROR insertando PDOC: %v", err)
 					} else {
-						for rows.Next() {
-							var codcli, tdoc, nrodoc string
-							if errS := rows.Scan(&codcli, &tdoc, &nrodoc); errS == nil {
-								k := clavePDOC(codcli, tdoc, nrodoc)
-								dedupePDOC[k] = true
-							}
+						if borrados, errLimp := LimpiarDuplicadosPDOC(dbPDOC); errLimp == nil && borrados > 0 {
+							fmt.Printf("  PDOC: %d duplicados limpiados en SQL\n", borrados)
 						}
-						rows.Close()
-					}
-					fmt.Printf("  PDOC: %d existentes en SQL\n", len(dedupePDOC))
-
-					var nuevos []PDOCRegistro
-					for _, r := range pdocRegs {
-						k := clavePDOC(r.FCODCLI, r.FTIPOD, r.FNRODOC)
-						if !dedupePDOC[k] {
-							nuevos = append(nuevos, r)
-							dedupePDOC[k] = true
-						}
-					}
-					fmt.Printf("  PDOC: %d nuevos a insertar\n", len(nuevos))
-
-					if len(nuevos) > 0 {
-						ins, err := InsertarPDOC(dbPDOC, nuevos)
-						if err != nil {
-							fmt.Printf("  ERROR insertando PDOC: %v\n", err)
-							logError("CxP: ERROR insertando PDOC: %v", err)
-						} else {
-							fmt.Printf("  PDOC: %d insertados OK\n", ins)
-							logInfo("CxP: PDOC %d registros DBF, %d existentes, %d insertados", len(pdocRegs), len(dedupePDOC), ins)
-							InsertarH_Tiendas(db, "PDOC", year, 0, len(pdocRegs), len(dedupePDOC), ins, "OK", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
-						}
-					} else {
-						fmt.Println("  PDOC: Sin cambios (todo sincronizado)")
-						logInfo("CxP: PDOC sin cambios, %d registros", len(pdocRegs))
-						InsertarH_Tiendas(db, "PDOC", year, 0, len(pdocRegs), len(dedupePDOC), 0, "SALTADO", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
+						fmt.Printf("  PDOC: %d insertados OK\n", ins)
+						logInfo("CxP: PDOC %d registros DBF, %d insertados", len(pdocRegs), ins)
+						InsertarH_Tiendas(db, "PDOC", year, 0, len(pdocRegs), 0, ins, "OK", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
 					}
 				}
 			}
@@ -1338,42 +1298,19 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 					fmt.Printf("  ERROR creando tabla PTRA: %v\n", err)
 					logError("CxP: ERROR creando tabla PTRA: %v", err)
 				} else {
-					dedupePTRA := make(map[string]bool)
-					rows, _ := dbPTRA.Query("SELECT ISNULL(TCODCLI,''), ISNULL(TNRODOC,''), ISNULL(TNROMOV,'') FROM PTRA_Datos")
-					if rows != nil {
-						for rows.Next() {
-							var c, n, m string
-							if rows.Scan(&c, &n, &m) == nil {
-								dedupePTRA[strings.TrimSpace(c)+"|"+strings.TrimSpace(n)+"|"+strings.TrimSpace(m)] = true
-							}
-						}
-						rows.Close()
+					fmt.Println("  Vaciando tabla PTRA_Datos (TRUNCATE)...")
+					if _, err := dbPTRA.Exec("TRUNCATE TABLE PTRA_Datos"); err != nil {
+						dbPTRA.Exec("DELETE FROM PTRA_Datos")
 					}
-					fmt.Printf("  PTRA: %d existentes en SQL\n", len(dedupePTRA))
 
-					var nuevos []PTRARegistro
-					for _, r := range ptraRegs {
-						key := strings.TrimSpace(r.TCODCLI) + "|" + strings.TrimSpace(r.TNRODOC) + "|" + strings.TrimSpace(r.TNROMOV)
-						if !dedupePTRA[key] {
-							nuevos = append(nuevos, r)
-						}
-					}
-					fmt.Printf("  PTRA: %d nuevos a insertar\n", len(nuevos))
-
-					if len(nuevos) > 0 {
-						ins, err := InsertarPTRA(dbPTRA, nuevos)
-						if err != nil {
-							fmt.Printf("  ERROR insertando PTRA: %v\n", err)
-							logError("CxP: ERROR insertando PTRA: %v", err)
-						} else {
-							fmt.Printf("  PTRA: %d insertados OK\n", ins)
-							logInfo("CxP: PTRA %d registros DBF, %d existentes, %d insertados", len(ptraRegs), len(dedupePTRA), ins)
-							InsertarH_Tiendas(db, "PTRA", year, 0, len(ptraRegs), len(dedupePTRA), ins, "OK", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
-						}
+					ins, err := InsertarPTRA(dbPTRA, ptraRegs)
+					if err != nil {
+						fmt.Printf("  ERROR insertando PTRA: %v\n", err)
+						logError("CxP: ERROR insertando PTRA: %v", err)
 					} else {
-						fmt.Println("  PTRA: Sin cambios (todo sincronizado)")
-						logInfo("CxP: PTRA sin cambios, %d registros", len(ptraRegs))
-						InsertarH_Tiendas(db, "PTRA", year, 0, len(ptraRegs), len(dedupePTRA), 0, "SALTADO", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
+						fmt.Printf("  PTRA: %d insertados OK\n", ins)
+						logInfo("CxP: PTRA %d registros DBF, %d insertados", len(ptraRegs), ins)
+						InsertarH_Tiendas(db, "PTRA", year, 0, len(ptraRegs), 0, ins, "OK", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
 					}
 				}
 			}
@@ -1404,41 +1341,19 @@ func ProcesarCxP(db *sql.DB, year int, modo string, tipoEjecucion string) {
 					fmt.Printf("  ERROR creando tabla MPRO: %v\n", err)
 					logError("CxP: ERROR creando tabla MPRO: %v", err)
 				} else {
-					dedupeMPRO := make(map[string]bool)
-					rows, _ := dbMPRO.Query("SELECT CODCLI FROM MPRO_Datos")
-					if rows != nil {
-						for rows.Next() {
-							var n string
-							if rows.Scan(&n) == nil {
-								dedupeMPRO[strings.TrimSpace(n)] = true
-							}
-						}
-						rows.Close()
+					fmt.Println("  Vaciando tabla MPRO_Datos (TRUNCATE)...")
+					if _, err := dbMPRO.Exec("TRUNCATE TABLE MPRO_Datos"); err != nil {
+						dbMPRO.Exec("DELETE FROM MPRO_Datos")
 					}
-					fmt.Printf("  MPRO: %d existentes en SQL\n", len(dedupeMPRO))
 
-					var nuevos []MPRORegistro
-					for _, r := range mproRegs {
-						if !dedupeMPRO[strings.TrimSpace(r.CODCLI)] {
-							nuevos = append(nuevos, r)
-						}
-					}
-					fmt.Printf("  MPRO: %d nuevos a insertar\n", len(nuevos))
-
-					if len(nuevos) > 0 {
-						ins, err := InsertarMPRO(dbMPRO, nuevos)
-						if err != nil {
-							fmt.Printf("  ERROR insertando MPRO: %v\n", err)
-							logError("CxP: ERROR insertando MPRO: %v", err)
-						} else {
-							fmt.Printf("  MPRO: %d insertados OK\n", ins)
-							logInfo("CxP: MPRO %d registros DBF, %d existentes, %d insertados", len(mproRegs), len(dedupeMPRO), ins)
-							InsertarH_Tiendas(db, "MPRO", year, 0, len(mproRegs), len(dedupeMPRO), ins, "OK", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
-						}
+					ins, err := InsertarMPRO(dbMPRO, mproRegs)
+					if err != nil {
+						fmt.Printf("  ERROR insertando MPRO: %v\n", err)
+						logError("CxP: ERROR insertando MPRO: %v", err)
 					} else {
-						fmt.Println("  MPRO: Sin cambios (todo sincronizado)")
-						logInfo("CxP: MPRO sin cambios, %d registros", len(mproRegs))
-						InsertarH_Tiendas(db, "MPRO", year, 0, len(mproRegs), len(dedupeMPRO), 0, "SALTADO", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
+						fmt.Printf("  MPRO: %d insertados OK\n", ins)
+						logInfo("CxP: MPRO %d registros DBF, %d insertados", len(mproRegs), ins)
+						InsertarH_Tiendas(db, "MPRO", year, 0, len(mproRegs), 0, ins, "OK", int(time.Since(tStart).Seconds()), modo, tipoEjecucion, "CxP")
 					}
 				}
 			}
